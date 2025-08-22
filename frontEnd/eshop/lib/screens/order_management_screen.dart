@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import '../providers/order_provider.dart';
 import '../providers/auth_provider.dart';
 import '../models/order.dart';
@@ -71,10 +72,12 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> {
     if (_hasError) {
       return Scaffold(
         appBar: AppBar(
-          title: const Text('مدیریت سفارشات'),
+          title: const Text('مدیریت سفارشات',
+              style: TextStyle(fontFamily: 'Vazir')),
+          backgroundColor: AppColors.primary,
           actions: [
             IconButton(
-              icon: const Icon(Icons.logout),
+              icon: const FaIcon(FontAwesomeIcons.signOutAlt),
               tooltip: 'خروج',
               onPressed: () async {
                 await authProvider.logout();
@@ -91,7 +94,7 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> {
               Text(
                 'خطا در بارگذاری سفارشات: $_errorMessage',
                 textDirection: TextDirection.rtl,
-                style: const TextStyle(fontSize: 16),
+                style: const TextStyle(fontSize: 16, fontFamily: 'Vazir'),
               ),
               const SizedBox(height: 16),
               ElevatedButton(
@@ -103,7 +106,14 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> {
                   });
                   _fetchData();
                 },
-                child: const Text('تلاش مجدد'),
+                child: const Text('تلاش مجدد',
+                    style: TextStyle(fontFamily: 'Vazir')),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.accent,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
               ),
             ],
           ),
@@ -113,10 +123,12 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('مدیریت سفارشات'),
+        title:
+            const Text('مدیریت سفارشات', style: TextStyle(fontFamily: 'Vazir')),
+        backgroundColor: AppColors.primary,
         actions: [
           IconButton(
-            icon: const Icon(Icons.logout),
+            icon: const FaIcon(FontAwesomeIcons.signOutAlt),
             tooltip: 'خروج',
             onPressed: () async {
               await authProvider.logout();
@@ -141,7 +153,7 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> {
                 child: Text(
                   'هیچ سفارشی یافت نشد',
                   textDirection: TextDirection.rtl,
-                  style: TextStyle(fontSize: 16),
+                  style: TextStyle(fontSize: 16, fontFamily: 'Vazir'),
                 ),
               );
             }
@@ -151,27 +163,37 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> {
               itemBuilder: (ctx, i) {
                 final order = orderProvider.orders[i];
                 return Card(
+                  elevation: 4,
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
                   child: ListTile(
-                    title: Text('سفارش #${order.id}',
-                        textDirection: TextDirection.rtl),
+                    leading: FaIcon(
+                      FontAwesomeIcons.boxOpen,
+                      color: AppColors.accent,
+                    ),
+                    title: Text(
+                      'سفارش #${order.id}',
+                      textDirection: TextDirection.rtl,
+                      style: const TextStyle(
+                          fontFamily: 'Vazir', fontWeight: FontWeight.bold),
+                    ),
                     subtitle: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
                           'وضعیت: ${order.status.toString().split('.').last}',
                           textDirection: TextDirection.rtl,
-                        ),
-                        Text(
-                          'کاربر: ${order.userId}',
-                          textDirection: TextDirection.rtl,
+                          style: const TextStyle(fontFamily: 'Vazir'),
                         ),
                         Text(
                           'مبلغ کل: ${order.totalAmount.toStringAsFixed(0)} تومان',
                           textDirection: TextDirection.rtl,
+                          style: const TextStyle(fontFamily: 'Vazir'),
                         ),
                         Text(
                           'درخواست مرجوعی: ${order.returnRequest ? 'بله' : 'خیر'}',
                           textDirection: TextDirection.rtl,
+                          style: const TextStyle(fontFamily: 'Vazir'),
                         ),
                       ],
                     ),
@@ -184,6 +206,8 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> {
                                       child: Text(
                                         status.toString().split('.').last,
                                         textDirection: TextDirection.rtl,
+                                        style: const TextStyle(
+                                            fontFamily: 'Vazir'),
                                       ),
                                     ))
                                 .toList(),
@@ -198,12 +222,14 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> {
                                   ScaffoldMessenger.of(context)
                                       .hideCurrentSnackBar();
                                   ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text(
+                                    SnackBar(
+                                      content: const Text(
                                         'وضعیت سفارش با موفقیت به‌روزرسانی شد',
                                         textDirection: TextDirection.rtl,
+                                        style: TextStyle(fontFamily: 'Vazir'),
                                       ),
-                                      duration: Duration(seconds: 2),
+                                      backgroundColor: AppColors.accent,
+                                      duration: const Duration(seconds: 2),
                                     ),
                                   );
                                 } catch (e) {
@@ -221,7 +247,10 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> {
                                       content: Text(
                                         'خطا در به‌روزرسانی وضعیت سفارش: $errorMessage',
                                         textDirection: TextDirection.rtl,
+                                        style: const TextStyle(
+                                            fontFamily: 'Vazir'),
                                       ),
+                                      backgroundColor: Colors.red,
                                       duration: const Duration(seconds: 3),
                                     ),
                                   );
@@ -243,7 +272,7 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> {
       ),
       floatingActionButton: FloatingActionButton(
         backgroundColor: AppColors.accent,
-        child: const Icon(Icons.shopping_cart),
+        child: const FaIcon(FontAwesomeIcons.shoppingCart),
         onPressed: () {
           debugPrint('Navigating to cart');
           Navigator.pushNamed(context, AppRoutes.cart);

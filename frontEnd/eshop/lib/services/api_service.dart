@@ -294,18 +294,31 @@ class ApiService {
         'خطا در دریافت کاربران: ${response.statusCode} - ${response.body}');
   }
 
-  static Future<void> updateUser(String id, User user, String token) async {
-    final response = await http.put(
-      Uri.parse('${AppConfig.apiBaseUrl}/users/$id'),
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer $token'
-      },
-      body: json.encode({'username': user.username, 'email': user.email}),
-    );
-    if (response.statusCode != 200) {
+  static Future<Map<String, dynamic>> updateUser(
+      String userId, String token, String username, String email) async {
+    try {
+      print('Updating user $userId with username: $username, email: $email');
+      final response = await http.put(
+        Uri.parse('${AppConfig.apiBaseUrl}/users/$userId'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({
+          'username': username,
+          'email': email,
+        }),
+      );
+      print(
+          'Update response status: ${response.statusCode}, body: ${response.body}');
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      }
       throw Exception(
-          'خطا در به‌روزرسانی کاربر: ${response.statusCode} - ${response.body}');
+          'Failed to update user: ${response.statusCode} - ${response.body}');
+    } catch (e) {
+      print('Update user error: $e');
+      rethrow;
     }
   }
 
@@ -333,6 +346,26 @@ class ApiService {
     if (response.statusCode != 200) {
       throw Exception(
           'خطا در تغییر نقش کاربر: ${response.statusCode} - ${response.body}');
+    }
+  }
+
+  static Future<Map<String, dynamic>> getUserById(
+      String userId, String token) async {
+    try {
+      print('Fetching user data for userId: $userId with token: $token');
+      final response = await http.get(
+        Uri.parse('${AppConfig.apiBaseUrl}/users/$userId'),
+        headers: {'Authorization': 'Bearer $token'},
+      );
+      print('Response status: ${response.statusCode}, body: ${response.body}');
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      }
+      throw Exception(
+          'Failed to fetch user: ${response.statusCode} - ${response.body}');
+    } catch (e) {
+      print('Get user error: $e');
+      rethrow;
     }
   }
 }

@@ -69,4 +69,12 @@ class AuthProvider with ChangeNotifier {
     notifyListeners();
     return true;
   }
+
+  void updateUserInfo(String username) {
+    _userId = username;
+    SharedPreferences.getInstance().then((prefs) {
+      prefs.setString('userId', username);
+      notifyListeners();
+    });
+  }
 }

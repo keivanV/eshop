@@ -1,6 +1,5 @@
 const { verifyToken } = require('../config/jwt');
 const User = require('../models/user.model');
-const Role = require('../models/role.model');
 
 module.exports = (allowedRoles = []) => async (req, res, next) => {
   const token = req.header('Authorization')?.replace('Bearer ', '');
@@ -11,6 +10,13 @@ module.exports = (allowedRoles = []) => async (req, res, next) => {
     const user = await User.findById(decoded.id).populate('role');
     if (!user) return res.status(401).json({ msg: 'Invalid user' });
     req.user = user;
+
+    // Allow users to access their own data if req.params.id matches req.user.id
+    if (req.params.id && req.params.id === decoded.id) {
+      return next();
+    }
+
+    // Check allowed roles for other cases
     if (allowedRoles.length && !allowedRoles.includes(user.role.name)) {
       return res.status(403).json({ msg: 'Access denied' });
     }

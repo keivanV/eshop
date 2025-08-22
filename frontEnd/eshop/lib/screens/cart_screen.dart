@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:shop_app/models/product.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import '../models/product.dart';
 import '../models/order.dart';
 import '../providers/cart_provider.dart';
 import '../providers/product_provider.dart';
@@ -44,30 +45,49 @@ class _CartScreenState extends State<CartScreen> {
 
     if (_hasError) {
       return Scaffold(
+        appBar: AppBar(
+          title: const Text('سبد خرید', style: TextStyle(fontFamily: 'Vazir')),
+          backgroundColor: AppColors.primary,
+        ),
         body: Center(
           child: Text(
             'خطا: $_errorMessage',
             textDirection: TextDirection.rtl,
-            style: const TextStyle(fontSize: 16),
+            style: const TextStyle(fontSize: 16, fontFamily: 'Vazir'),
           ),
         ),
       );
     }
 
     return Scaffold(
-      appBar: AppBar(title: const Text('سبد خرید')),
+      appBar: AppBar(
+        title: const Text('سبد خرید', style: TextStyle(fontFamily: 'Vazir')),
+        backgroundColor: AppColors.primary,
+        actions: [
+          IconButton(
+            icon: const FaIcon(FontAwesomeIcons.signOutAlt),
+            tooltip: 'خروج',
+            onPressed: () async {
+              await authProvider.logout();
+              Navigator.pushNamedAndRemoveUntil(
+                  context, AppRoutes.login, (route) => false);
+            },
+          ),
+        ],
+      ),
       body: cartProvider.items.isEmpty
           ? const Center(
               child: Text(
                 'سبد خرید شما خالی است',
                 textDirection: TextDirection.rtl,
-                style: TextStyle(fontSize: 16),
+                style: TextStyle(fontSize: 16, fontFamily: 'Vazir'),
               ),
             )
           : Consumer<CartProvider>(
               builder: (ctx, cartProvider, _) {
                 debugPrint('Rendering cart items');
                 return ListView.builder(
+                  padding: const EdgeInsets.all(16),
                   itemCount: cartProvider.items.length,
                   itemBuilder: (ctx, i) {
                     final entry = cartProvider.items.entries.elementAt(i);
@@ -81,6 +101,10 @@ class _CartScreenState extends State<CartScreen> {
                         stock: 0,
                       ),
                     );
+                    final imageUrl = product.imageUrls != null &&
+                            product.imageUrls!.isNotEmpty
+                        ? product.imageUrls!.first
+                        : 'https://placehold.co/50x50';
                     return Dismissible(
                       key: Key(entry.key),
                       direction: DismissDirection.endToStart,
@@ -92,24 +116,40 @@ class _CartScreenState extends State<CartScreen> {
                         color: Colors.red,
                         alignment: Alignment.centerRight,
                         padding: const EdgeInsets.only(right: 20),
-                        child: const Icon(Icons.delete, color: Colors.white),
+                        child: const FaIcon(FontAwesomeIcons.trash,
+                            color: Colors.white),
                       ),
                       child: Card(
-                        elevation: 3,
-                        margin: const EdgeInsets.symmetric(
-                            vertical: 5, horizontal: 10),
+                        elevation: 4,
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12)),
                         child: ListTile(
-                          leading: const Icon(Icons.inventory),
+                          leading: ClipRRect(
+                            borderRadius: BorderRadius.circular(8),
+                            child: Image.network(
+                              imageUrl,
+                              width: 50,
+                              height: 50,
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) =>
+                                  const Icon(Icons.broken_image),
+                            ),
+                          ),
                           title: Text(
                             product.name,
                             textDirection: TextDirection.rtl,
+                            style: const TextStyle(
+                                fontFamily: 'Vazir',
+                                fontWeight: FontWeight.bold),
                           ),
                           subtitle: Text(
                             'تعداد: ${entry.value} | قیمت: ${(product.price * entry.value).toStringAsFixed(0)} تومان',
                             textDirection: TextDirection.rtl,
+                            style: const TextStyle(fontFamily: 'Vazir'),
                           ),
                           trailing: IconButton(
-                            icon: const Icon(Icons.remove_circle),
+                            icon: const FaIcon(FontAwesomeIcons.minusCircle,
+                                color: Colors.red),
                             onPressed: () {
                               debugPrint(
                                   'Updating quantity for ${entry.key} to ${entry.value - 1}');
@@ -125,18 +165,23 @@ class _CartScreenState extends State<CartScreen> {
               },
             ),
       bottomNavigationBar: BottomAppBar(
+        color: AppColors.primary,
         child: Padding(
-          padding: const EdgeInsets.all(10),
+          padding: const EdgeInsets.all(16),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
                 'جمع کل: ${cartProvider.getTotalAmount(productProvider.products).toStringAsFixed(0)} تومان',
-                style:
-                    const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  fontFamily: 'Vazir',
+                  color: Colors.white,
+                ),
                 textDirection: TextDirection.rtl,
               ),
-              ElevatedButton(
+              ElevatedButton.icon(
                 onPressed: cartProvider.items.isEmpty
                     ? null
                     : () async {
@@ -154,12 +199,15 @@ class _CartScreenState extends State<CartScreen> {
                           await orderProvider.createOrder(
                               orderItems, total, authProvider.token!);
                           cartProvider.clear();
+                          ScaffoldMessenger.of(context).hideCurrentSnackBar();
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(
                               content: Text(
                                 'سفارش با موفقیت ثبت شد',
                                 textDirection: TextDirection.rtl,
+                                style: TextStyle(fontFamily: 'Vazir'),
                               ),
+                              backgroundColor: AppColors.accent,
                             ),
                           );
                           Navigator.pushNamed(
@@ -176,7 +224,18 @@ class _CartScreenState extends State<CartScreen> {
                           });
                         }
                       },
-                child: const Text('ثبت سفارش'),
+                icon: const FaIcon(FontAwesomeIcons.checkCircle,
+                    color: Colors.white),
+                label: const Text(
+                  'ثبت سفارش',
+                  style: TextStyle(fontFamily: 'Vazir', color: Colors.white),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.accent,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
               ),
             ],
           ),

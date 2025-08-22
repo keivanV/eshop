@@ -1,3 +1,5 @@
+import 'package:flutter/material.dart';
+
 class Product {
   final String id;
   final String name;
@@ -5,6 +7,7 @@ class Product {
   final String categoryId;
   final int stock;
   final String? description;
+  final List<String>? imageUrls;
 
   Product({
     required this.id,
@@ -13,16 +16,24 @@ class Product {
     required this.categoryId,
     required this.stock,
     this.description,
+    this.imageUrls,
   });
 
   factory Product.fromJson(Map<String, dynamic> json) {
     return Product(
-      id: json['_id'] ?? '',
-      name: json['name'] ?? 'نامشخص',
-      price: (json['price'] ?? 0).toDouble(),
-      categoryId: json['category']?['_id'] ?? '',
-      stock: json['stock'] ?? 0,
-      description: json['description'],
+      id: json['_id']?.toString() ?? '',
+      name: json['name']?.toString() ?? 'نامشخص',
+      price: (json['price'] is num ? json['price'].toDouble() : 0.0),
+      categoryId: json['category']?['_id']?.toString() ??
+          json['category']?.toString() ??
+          '',
+      stock: json['stock'] is num ? json['stock'].toInt() : 0,
+      description: json['description']?.toString(),
+      imageUrls: json['imageUrls'] != null
+          ? (json['imageUrls'] as List<dynamic>)
+              .map((e) => e.toString())
+              .toList()
+          : null,
     );
   }
 
@@ -34,6 +45,7 @@ class Product {
       'category': categoryId,
       'stock': stock,
       'description': description,
+      'imageUrls': imageUrls,
     };
   }
 
@@ -47,7 +59,8 @@ class Product {
           price == other.price &&
           categoryId == other.categoryId &&
           stock == other.stock &&
-          description == other.description;
+          description == other.description &&
+          imageUrls == other.imageUrls;
 
   @override
   int get hashCode =>
@@ -56,5 +69,6 @@ class Product {
       price.hashCode ^
       categoryId.hashCode ^
       stock.hashCode ^
-      description.hashCode;
+      description.hashCode ^
+      imageUrls.hashCode;
 }

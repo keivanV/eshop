@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:curved_navigation_bar/curved_navigation_bar.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import '../providers/auth_provider.dart';
 import '../providers/product_provider.dart';
 import '../widgets/product_card.dart';
@@ -60,7 +62,6 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
 
-    debugPrint('Building HomeScreen');
     if (_isLoading) {
       return const Scaffold(
         body: Center(child: CircularProgressIndicator()),
@@ -70,10 +71,11 @@ class _HomeScreenState extends State<HomeScreen> {
     if (_hasError) {
       return Scaffold(
         appBar: AppBar(
-          title: const Text('محصولات'),
+          title: const Text('محصولات', style: TextStyle(fontFamily: 'Vazir')),
+          backgroundColor: AppColors.primary,
           actions: [
             IconButton(
-              icon: const Icon(Icons.logout),
+              icon: const FaIcon(FontAwesomeIcons.signOutAlt),
               tooltip: 'خروج',
               onPressed: () async {
                 await authProvider.logout();
@@ -90,7 +92,7 @@ class _HomeScreenState extends State<HomeScreen> {
               Text(
                 'خطا در بارگذاری محصولات: $_errorMessage',
                 textDirection: TextDirection.rtl,
-                style: const TextStyle(fontSize: 16),
+                style: const TextStyle(fontSize: 16, fontFamily: 'Vazir'),
               ),
               const SizedBox(height: 16),
               ElevatedButton(
@@ -102,7 +104,14 @@ class _HomeScreenState extends State<HomeScreen> {
                   });
                   _fetchData();
                 },
-                child: const Text('تلاش مجدد'),
+                child: const Text('تلاش مجدد',
+                    style: TextStyle(fontFamily: 'Vazir')),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.accent,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
               ),
             ],
           ),
@@ -112,10 +121,11 @@ class _HomeScreenState extends State<HomeScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('محصولات'),
+        title: const Text('محصولات', style: TextStyle(fontFamily: 'Vazir')),
+        backgroundColor: AppColors.primary,
         actions: [
           IconButton(
-            icon: const Icon(Icons.logout),
+            icon: const FaIcon(FontAwesomeIcons.signOutAlt),
             tooltip: 'خروج',
             onPressed: () async {
               await authProvider.logout();
@@ -123,6 +133,15 @@ class _HomeScreenState extends State<HomeScreen> {
                   context, AppRoutes.login, (route) => false);
             },
           ),
+          if (authProvider.role == 'admin')
+            IconButton(
+              icon: const FaIcon(FontAwesomeIcons.plusCircle),
+              tooltip: 'مدیریت محصولات',
+              onPressed: () {
+                debugPrint('Navigating to product management');
+                Navigator.pushNamed(context, AppRoutes.productManagement);
+              },
+            ),
         ],
       ),
       body: RefreshIndicator(
@@ -140,17 +159,17 @@ class _HomeScreenState extends State<HomeScreen> {
                 child: Text(
                   'هیچ محصولی یافت نشد',
                   textDirection: TextDirection.rtl,
-                  style: TextStyle(fontSize: 16),
+                  style: TextStyle(fontSize: 16, fontFamily: 'Vazir'),
                 ),
               );
             }
             return GridView.builder(
-              padding: const EdgeInsets.all(10),
+              padding: const EdgeInsets.all(16),
               gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                 crossAxisCount: 2,
-                childAspectRatio: 3 / 4,
-                crossAxisSpacing: 10,
-                mainAxisSpacing: 10,
+                childAspectRatio: 2 / 3,
+                crossAxisSpacing: 16,
+                mainAxisSpacing: 16,
               ),
               itemCount: productProvider.products.length,
               itemBuilder: (_, i) {
@@ -164,22 +183,27 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
       floatingActionButton: FloatingActionButton(
         backgroundColor: AppColors.accent,
-        child: const Icon(Icons.shopping_cart),
+        child: const FaIcon(FontAwesomeIcons.shoppingCart),
         onPressed: () {
           debugPrint('Navigating to cart');
           Navigator.pushNamed(context, AppRoutes.cart);
         },
       ),
-      bottomNavigationBar: BottomNavigationBar(
+      bottomNavigationBar: CurvedNavigationBar(
+        backgroundColor: Colors.transparent,
+        buttonBackgroundColor: AppColors.accent,
+        color: AppColors.primary,
+        animationDuration: const Duration(milliseconds: 300),
         items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'محصولات'),
-          BottomNavigationBarItem(
-              icon: Icon(Icons.dashboard), label: 'داشبورد'),
+          FaIcon(FontAwesomeIcons.home, color: Colors.white),
+          FaIcon(FontAwesomeIcons.boxOpen, color: Colors.white),
+          FaIcon(FontAwesomeIcons.chartBar, color: Colors.white),
         ],
-        currentIndex: 0,
-        selectedItemColor: AppColors.accent,
         onTap: (index) {
           if (index == 1) {
+            debugPrint('Navigating to orders');
+            Navigator.pushNamed(context, AppRoutes.orderManagement);
+          } else if (index == 2) {
             debugPrint('Navigating to dashboard');
             Navigator.pushNamed(context, AppRoutes.dashboard);
           }
