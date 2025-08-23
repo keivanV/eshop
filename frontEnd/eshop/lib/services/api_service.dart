@@ -1,11 +1,14 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:http_parser/http_parser.dart';
 import '../constants.dart';
 import '../models/category.dart';
 import '../models/product.dart';
 import '../models/order.dart';
 import '../models/inventory_item.dart';
 import '../models/user.dart';
+import 'package:image_picker/image_picker.dart';
+import 'dart:io';
 
 class ApiService {
   static String _padBase64(String base64Str) {
@@ -15,10 +18,15 @@ class ApiService {
     return base64Str;
   }
 
+  static String _cleanBaseUrl() {
+    return AppConfig.apiBaseUrl.replaceAll(RegExp(r'/api$'), '');
+  }
+
   static Future<Map<String, dynamic>> login(
       String username, String password) async {
+    final baseUrl = _cleanBaseUrl();
     final response = await http.post(
-      Uri.parse('${AppConfig.apiBaseUrl}/auth/login'),
+      Uri.parse('$baseUrl/api/auth/login'),
       headers: {'Content-Type': 'application/json'},
       body: json.encode({'username': username, 'password': password}),
     );
@@ -27,7 +35,6 @@ class ApiService {
       final payload = _padBase64(data['token'].split('.')[1]);
       try {
         final decoded = json.decode(utf8.decode(base64Url.decode(payload)));
-
         return {
           'token': data['token'],
           'role': data['role'],
@@ -42,8 +49,9 @@ class ApiService {
 
   static Future<Map<String, dynamic>> register(
       String username, String password, String email, String role) async {
+    final baseUrl = _cleanBaseUrl();
     final response = await http.post(
-      Uri.parse('${AppConfig.apiBaseUrl}/auth/register'),
+      Uri.parse('$baseUrl/api/auth/register'),
       headers: {'Content-Type': 'application/json'},
       body: json.encode({
         'username': username,
@@ -57,7 +65,6 @@ class ApiService {
       final payload = _padBase64(data['token'].split('.')[1]);
       try {
         final decoded = json.decode(utf8.decode(base64Url.decode(payload)));
-
         return {
           'token': data['token'],
           'userId': decoded['id'],
@@ -72,8 +79,8 @@ class ApiService {
   }
 
   static Future<List<Category>> getCategories() async {
-    final response =
-        await http.get(Uri.parse('${AppConfig.apiBaseUrl}/categories'));
+    final baseUrl = _cleanBaseUrl();
+    final response = await http.get(Uri.parse('$baseUrl/api/categories'));
     if (response.statusCode == 200) {
       return (json.decode(response.body) as List)
           .map((e) => Category.fromJson(e))
@@ -84,8 +91,9 @@ class ApiService {
   }
 
   static Future<void> createCategory(Category category, String token) async {
+    final baseUrl = _cleanBaseUrl();
     final response = await http.post(
-      Uri.parse('${AppConfig.apiBaseUrl}/categories'),
+      Uri.parse('$baseUrl/api/categories'),
       headers: {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $token'
@@ -100,8 +108,9 @@ class ApiService {
 
   static Future<void> updateCategory(
       String id, Category category, String token) async {
+    final baseUrl = _cleanBaseUrl();
     final response = await http.put(
-      Uri.parse('${AppConfig.apiBaseUrl}/categories/$id'),
+      Uri.parse('$baseUrl/api/categories/$id'),
       headers: {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $token'
@@ -115,8 +124,9 @@ class ApiService {
   }
 
   static Future<void> deleteCategory(String id, String token) async {
+    final baseUrl = _cleanBaseUrl();
     final response = await http.delete(
-      Uri.parse('${AppConfig.apiBaseUrl}/categories/$id'),
+      Uri.parse('$baseUrl/api/categories/$id'),
       headers: {'Authorization': 'Bearer $token'},
     );
     if (response.statusCode != 200) {
@@ -126,8 +136,8 @@ class ApiService {
   }
 
   static Future<List<Product>> getProducts() async {
-    final response =
-        await http.get(Uri.parse('${AppConfig.apiBaseUrl}/products'));
+    final baseUrl = _cleanBaseUrl();
+    final response = await http.get(Uri.parse('$baseUrl/api/products'));
     if (response.statusCode == 200) {
       return (json.decode(response.body) as List)
           .map((e) => Product.fromJson(e))
@@ -138,8 +148,9 @@ class ApiService {
   }
 
   static Future<void> createProduct(Product product, String token) async {
+    final baseUrl = _cleanBaseUrl();
     final response = await http.post(
-      Uri.parse('${AppConfig.apiBaseUrl}/products'),
+      Uri.parse('$baseUrl/api/products'),
       headers: {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $token'
@@ -154,8 +165,9 @@ class ApiService {
 
   static Future<void> updateProduct(
       String id, Product product, String token) async {
+    final baseUrl = _cleanBaseUrl();
     final response = await http.put(
-      Uri.parse('${AppConfig.apiBaseUrl}/products/$id'),
+      Uri.parse('$baseUrl/api/products/$id'),
       headers: {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $token'
@@ -169,8 +181,9 @@ class ApiService {
   }
 
   static Future<void> deleteProduct(String id, String token) async {
+    final baseUrl = _cleanBaseUrl();
     final response = await http.delete(
-      Uri.parse('${AppConfig.apiBaseUrl}/products/$id'),
+      Uri.parse('$baseUrl/api/products/$id'),
       headers: {'Authorization': 'Bearer $token'},
     );
     if (response.statusCode != 200) {
@@ -179,9 +192,46 @@ class ApiService {
     }
   }
 
+  static Future<void> uploadProductImages(
+      String productId, List<XFile> images, String token) async {
+    final baseUrl = _cleanBaseUrl();
+    final uploadUrl = '$baseUrl/api/products/$productId/images';
+    print('Uploading images to: $uploadUrl');
+    final request = http.MultipartRequest(
+      'POST',
+      Uri.parse(uploadUrl),
+    )..headers['Authorization'] = 'Bearer $token';
+
+    for (var file in images) {
+      final filePath = file.path;
+      final ext = filePath.split('.').last.toLowerCase();
+      final mimeType = ext == 'png'
+          ? 'image/png'
+          : ext == 'jpg' || ext == 'jpeg'
+              ? 'image/jpeg'
+              : file.mimeType ?? 'image/png';
+      print('Adding file: $filePath, MIME type: $mimeType');
+      request.files.add(
+        await http.MultipartFile.fromPath(
+          'images',
+          filePath,
+          contentType: MediaType('image', ext == 'png' ? 'png' : 'jpeg'),
+        ),
+      );
+    }
+
+    final streamedResponse = await request.send();
+    final response = await http.Response.fromStream(streamedResponse);
+    print('Response status: ${response.statusCode}, body: ${response.body}');
+    if (response.statusCode != 200) {
+      throw Exception('خطا در آپلود تصاویر: ${response.body}');
+    }
+  }
+
   static Future<List<InventoryItem>> getInventory(String token) async {
+    final baseUrl = _cleanBaseUrl();
     final response = await http.get(
-      Uri.parse('${AppConfig.apiBaseUrl}/inventory'),
+      Uri.parse('$baseUrl/api/inventory'),
       headers: {'Authorization': 'Bearer $token'},
     );
     if (response.statusCode == 200) {
@@ -195,8 +245,9 @@ class ApiService {
 
   static Future<void> updateInventory(
       String productId, int quantity, String token) async {
+    final baseUrl = _cleanBaseUrl();
     final response = await http.put(
-      Uri.parse('${AppConfig.apiBaseUrl}/inventory'),
+      Uri.parse('$baseUrl/api/inventory'),
       headers: {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $token'
@@ -210,8 +261,9 @@ class ApiService {
   }
 
   static Future<List<Order>> getOrders(String token) async {
+    final baseUrl = _cleanBaseUrl();
     final response = await http.get(
-      Uri.parse('${AppConfig.apiBaseUrl}/orders'),
+      Uri.parse('$baseUrl/api/orders'),
       headers: {'Authorization': 'Bearer $token'},
     );
     if (response.statusCode == 200) {
@@ -225,8 +277,9 @@ class ApiService {
 
   static Future<void> createOrder(
       List<OrderItem> products, double totalAmount, String token) async {
+    final baseUrl = _cleanBaseUrl();
     final response = await http.post(
-      Uri.parse('${AppConfig.apiBaseUrl}/orders'),
+      Uri.parse('$baseUrl/api/orders'),
       headers: {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $token'
@@ -243,8 +296,9 @@ class ApiService {
   }
 
   static Future<void> cancelOrder(String id, String token) async {
+    final baseUrl = _cleanBaseUrl();
     final response = await http.put(
-      Uri.parse('${AppConfig.apiBaseUrl}/orders/$id/cancel'),
+      Uri.parse('$baseUrl/api/orders/$id/cancel'),
       headers: {'Authorization': 'Bearer $token'},
     );
     if (response.statusCode != 200) {
@@ -254,8 +308,9 @@ class ApiService {
   }
 
   static Future<void> requestReturn(String id, String token) async {
+    final baseUrl = _cleanBaseUrl();
     final response = await http.put(
-      Uri.parse('${AppConfig.apiBaseUrl}/orders/$id/return'),
+      Uri.parse('$baseUrl/api/orders/$id/return'),
       headers: {'Authorization': 'Bearer $token'},
     );
     if (response.statusCode != 200) {
@@ -266,8 +321,9 @@ class ApiService {
 
   static Future<void> updateOrderStatus(
       String id, OrderStatus status, String token) async {
+    final baseUrl = _cleanBaseUrl();
     final response = await http.put(
-      Uri.parse('${AppConfig.apiBaseUrl}/orders/$id/status'),
+      Uri.parse('$baseUrl/api/orders/$id/status'),
       headers: {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $token'
@@ -281,8 +337,9 @@ class ApiService {
   }
 
   static Future<List<User>> getUsers(String token) async {
+    final baseUrl = _cleanBaseUrl();
     final response = await http.get(
-      Uri.parse('${AppConfig.apiBaseUrl}/users'),
+      Uri.parse('$baseUrl/api/users'),
       headers: {'Authorization': 'Bearer $token'},
     );
     if (response.statusCode == 200) {
@@ -296,10 +353,11 @@ class ApiService {
 
   static Future<Map<String, dynamic>> updateUser(
       String userId, String token, String username, String email) async {
+    final baseUrl = _cleanBaseUrl();
     try {
       print('Updating user $userId with username: $username, email: $email');
       final response = await http.put(
-        Uri.parse('${AppConfig.apiBaseUrl}/users/$userId'),
+        Uri.parse('$baseUrl/api/users/$userId'),
         headers: {
           'Authorization': 'Bearer $token',
           'Content-Type': 'application/json',
@@ -323,8 +381,9 @@ class ApiService {
   }
 
   static Future<void> deleteUser(String id, String token) async {
+    final baseUrl = _cleanBaseUrl();
     final response = await http.delete(
-      Uri.parse('${AppConfig.apiBaseUrl}/users/$id'),
+      Uri.parse('$baseUrl/api/users/$id'),
       headers: {'Authorization': 'Bearer $token'},
     );
     if (response.statusCode != 200) {
@@ -335,8 +394,9 @@ class ApiService {
 
   static Future<void> changeUserRole(
       String id, String role, String token) async {
+    final baseUrl = _cleanBaseUrl();
     final response = await http.put(
-      Uri.parse('${AppConfig.apiBaseUrl}/users/$id/role'),
+      Uri.parse('$baseUrl/api/users/$id/role'),
       headers: {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $token'
@@ -351,10 +411,11 @@ class ApiService {
 
   static Future<Map<String, dynamic>> getUserById(
       String userId, String token) async {
+    final baseUrl = _cleanBaseUrl();
     try {
       print('Fetching user data for userId: $userId with token: $token');
       final response = await http.get(
-        Uri.parse('${AppConfig.apiBaseUrl}/users/$userId'),
+        Uri.parse('$baseUrl/api/users/$userId'),
         headers: {'Authorization': 'Bearer $token'},
       );
       print('Response status: ${response.statusCode}, body: ${response.body}');

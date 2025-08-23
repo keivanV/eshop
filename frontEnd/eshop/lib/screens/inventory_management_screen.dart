@@ -26,7 +26,10 @@ class _InventoryManagementScreenState extends State<InventoryManagementScreen> {
   @override
   void initState() {
     super.initState();
-    _fetchData();
+    debugPrint('InventoryManagementScreen initState');
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _fetchData();
+    });
   }
 
   Future<void> _fetchData() async {
@@ -36,6 +39,7 @@ class _InventoryManagementScreenState extends State<InventoryManagementScreen> {
         Provider.of<InventoryProvider>(context, listen: false);
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     try {
+      debugPrint('Fetching products and inventory...');
       await Future.wait([
         productProvider.fetchProducts(),
         inventoryProvider.fetchInventory(authProvider.token!),
@@ -43,6 +47,7 @@ class _InventoryManagementScreenState extends State<InventoryManagementScreen> {
       if (mounted) {
         setState(() {
           _isLoading = false;
+          _hasError = false;
         });
       }
     } catch (e) {
@@ -50,8 +55,61 @@ class _InventoryManagementScreenState extends State<InventoryManagementScreen> {
         setState(() {
           _isLoading = false;
           _hasError = true;
-          _errorMessage = e.toString().replaceFirst('Exception: ', '');
+          _errorMessage = _formatErrorMessage(e.toString());
         });
+      }
+      debugPrint('Error in fetchData: $e');
+    }
+  }
+
+  String _formatErrorMessage(String error) {
+    if (error.contains('403')) {
+      return 'عدم دسترسی: لطفاً با حساب مدیر وارد شوید';
+    } else if (error.contains('404')) {
+      return 'داده‌ای یافت نشد';
+    } else {
+      return error.replaceFirst('Exception: ', '');
+    }
+  }
+
+  Future<void> _updateInventory() async {
+    if (!_formKey.currentState!.validate()) return;
+    _formKey.currentState!.save();
+    final inventoryProvider =
+        Provider.of<InventoryProvider>(context, listen: false);
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    try {
+      await inventoryProvider.updateInventory(
+          _productId, _stock, authProvider.token!);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'موجودی با موفقیت به‌روزرسانی شد',
+              textDirection: TextDirection.rtl,
+              style: TextStyle(fontFamily: 'Vazir'),
+            ),
+            backgroundColor: AppColors.accent,
+          ),
+        );
+        setState(() {
+          _productId = '';
+          _stock = 0;
+        });
+        await inventoryProvider.fetchInventory(authProvider.token!);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'خطا در به‌روزرسانی موجودی: ${_formatErrorMessage(e.toString())}',
+              textDirection: TextDirection.rtl,
+              style: const TextStyle(fontFamily: 'Vazir'),
+            ),
+            backgroundColor: Colors.red,
+          ),
+        );
       }
     }
   }
@@ -62,23 +120,11 @@ class _InventoryManagementScreenState extends State<InventoryManagementScreen> {
     final inventoryProvider = Provider.of<InventoryProvider>(context);
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
 
-    if (_isLoading) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
-    }
-
-    if (_hasError) {
-      return Scaffold(
-        body: Center(
-            child: Text('خطا در بارگذاری موجودی: $_errorMessage',
-                textDirection: TextDirection.rtl)),
-      );
-    }
-
     return Scaffold(
       appBar: AppBar(
-        title: const Text('مدیریت انبار'),
+        title:
+            const Text('مدیریت انبار', style: TextStyle(fontFamily: 'Vazir')),
+        backgroundColor: AppColors.primary,
         actions: [
           IconButton(
             icon: const Icon(Icons.logout),
@@ -91,119 +137,199 @@ class _InventoryManagementScreenState extends State<InventoryManagementScreen> {
           ),
         ],
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          children: [
-            Form(
-              key: _formKey,
-              child: Column(
-                children: [
-                  DropdownButtonFormField<String>(
-                    value: _productId.isEmpty ? null : _productId,
-                    decoration: const InputDecoration(
-                        labelText: 'محصول', hintText: 'یک محصول انتخاب کنید'),
-                    items: productProvider.products
-                        .map((p) => DropdownMenuItem(
-                              value: p.id,
-                              child: Text(p.name,
-                                  textDirection: TextDirection.rtl),
-                            ))
-                        .toList(),
-                    validator: (value) => value == null ? 'الزامی' : null,
-                    onChanged: (value) => setState(() => _productId = value!),
-                  ),
-                  TextFormField(
-                    initialValue: _stock.toString(),
-                    decoration: const InputDecoration(
-                      labelText: 'موجودی',
-                      hintText: 'تعداد موجودی را وارد کنید',
-                    ),
-                    textDirection: TextDirection.rtl,
-                    keyboardType: TextInputType.number,
-                    validator: (value) =>
-                        int.tryParse(value!) == null ? 'مقدار نامعتبر' : null,
-                    onSaved: (value) => _stock = int.parse(value!),
-                  ),
-                  const SizedBox(height: 20),
-                  ElevatedButton(
-                    onPressed: () async {
-                      if (_formKey.currentState!.validate()) {
-                        _formKey.currentState!.save();
-                        try {
-                          await inventoryProvider.updateInventory(
-                              _productId, _stock, authProvider.token!);
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                                content: Text('موجودی با موفقیت به‌روزرسانی شد',
-                                    textDirection: TextDirection.rtl)),
-                          );
-                          setState(() {
-                            _productId = '';
-                            _stock = 0;
-                          });
-                          // Fetch inventory again to update UI
-                          await inventoryProvider
-                              .fetchInventory(authProvider.token!);
-                        } catch (e) {
-                          String errorMessage =
-                              e.toString().replaceFirst('Exception: ', '');
-                          if (errorMessage.contains('403')) {
-                            errorMessage =
-                                'عدم دسترسی: لطفاً با حساب مدیر وارد شوید';
-                          }
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(
-                                  'خطا در به‌روزرسانی موجودی: $errorMessage',
-                                  textDirection: TextDirection.rtl),
-                            ),
-                          );
-                        }
-                      }
-                    },
-                    child: const Text('به‌روزرسانی موجودی'),
-                  ),
-                ],
-              ),
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : _hasError
+              ? _buildErrorWidget()
+              : _buildInventoryList(
+                  context, productProvider, inventoryProvider),
+    );
+  }
+
+  Widget _buildErrorWidget() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Text(
+            'خطا در بارگذاری موجودی: $_errorMessage',
+            textDirection: TextDirection.rtl,
+            style: const TextStyle(fontSize: 16, fontFamily: 'Vazir'),
+          ),
+          const SizedBox(height: 16),
+          ElevatedButton(
+            onPressed: () {
+              setState(() {
+                _isLoading = true;
+                _hasError = false;
+              });
+              _fetchData();
+            },
+            child:
+                const Text('تلاش مجدد', style: TextStyle(fontFamily: 'Vazir')),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.accent,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12)),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
             ),
-            const SizedBox(height: 20),
-            Expanded(
-              child: Consumer<InventoryProvider>(
-                builder: (ctx, inventoryProvider, _) => ListView.builder(
-                  itemCount: inventoryProvider.inventory.length,
-                  itemBuilder: (ctx, i) {
-                    final item = inventoryProvider.inventory[i];
-                    final product = productProvider.products.firstWhere(
-                      (p) => p.id == item.productId,
-                      orElse: () => Product(
-                          id: '',
-                          name: 'نامشخص',
-                          price: 0,
-                          categoryId: '',
-                          stock: 0),
-                    );
-                    return Card(
-                      child: ListTile(
-                        title: Text(product.name,
-                            textDirection: TextDirection.rtl),
-                        subtitle: Text(
-                            'موجودی: ${item.quantity} | به‌روزرسانی: ${item.lastUpdated.toString()}',
-                            textDirection: TextDirection.rtl),
-                        trailing: IconButton(
-                          icon: const Icon(Icons.edit, color: Colors.blue),
-                          onPressed: () => setState(() {
-                            _productId = item.productId;
-                            _stock = item.quantity;
-                          }),
-                        ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInventoryList(BuildContext context,
+      ProductProvider productProvider, InventoryProvider inventoryProvider) {
+    return RefreshIndicator(
+      onRefresh: _fetchData,
+      child: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'به‌روزرسانی موجودی',
+                style: TextStyle(
+                  fontFamily: 'Vazir',
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
+                textDirection: TextDirection.rtl,
+              ),
+              const SizedBox(height: 12),
+              Form(
+                key: _formKey,
+                child: Column(
+                  children: [
+                    DropdownButtonFormField<String>(
+                      value: _productId.isEmpty ? null : _productId,
+                      decoration: const InputDecoration(
+                        labelText: 'محصول',
+                        hintText: 'یک محصول انتخاب کنید',
+                        labelStyle: TextStyle(fontFamily: 'Vazir'),
+                        border: OutlineInputBorder(),
+                        contentPadding:
+                            EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                       ),
-                    );
-                  },
+                      items: productProvider.products
+                          .map((p) => DropdownMenuItem(
+                                value: p.id,
+                                child: Text(
+                                  p.name,
+                                  textDirection: TextDirection.rtl,
+                                  style: const TextStyle(fontFamily: 'Vazir'),
+                                ),
+                              ))
+                          .toList(),
+                      validator: (value) =>
+                          value == null ? 'لطفاً یک محصول انتخاب کنید' : null,
+                      onChanged: (value) => setState(() => _productId = value!),
+                    ),
+                    const SizedBox(height: 12),
+                    TextFormField(
+                      initialValue: _stock.toString(),
+                      decoration: const InputDecoration(
+                        labelText: 'موجودی',
+                        hintText: 'تعداد موجودی را وارد کنید',
+                        labelStyle: TextStyle(fontFamily: 'Vazir'),
+                        border: OutlineInputBorder(),
+                        contentPadding:
+                            EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      ),
+                      textDirection: TextDirection.rtl,
+                      keyboardType: TextInputType.number,
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'لطفاً مقدار موجودی را وارد کنید';
+                        }
+                        if (int.tryParse(value) == null ||
+                            int.parse(value) < 0) {
+                          return 'لطفاً یک عدد معتبر وارد کنید';
+                        }
+                        return null;
+                      },
+                      onSaved: (value) => _stock = int.parse(value!),
+                    ),
+                    const SizedBox(height: 12),
+                    ElevatedButton(
+                      onPressed: _updateInventory,
+                      child: const Text('به‌روزرسانی موجودی',
+                          style: TextStyle(fontFamily: 'Vazir')),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.accent,
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12)),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 20, vertical: 12),
+                      ),
+                    ),
+                  ],
                 ),
               ),
-            ),
-          ],
+              const SizedBox(height: 20),
+              const Text(
+                'لیست موجودی',
+                style: TextStyle(
+                  fontFamily: 'Vazir',
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
+                textDirection: TextDirection.rtl,
+              ),
+              ListView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: inventoryProvider.inventory.length,
+                itemBuilder: (ctx, i) {
+                  final item = inventoryProvider.inventory[i];
+                  final product = productProvider.products.firstWhere(
+                    (p) => p.id == item.productId,
+                    orElse: () => Product(
+                      id: '',
+                      name: 'نامشخص',
+                      price: 0,
+                      categoryId: '',
+                      stock: 0,
+                    ),
+                  );
+                  return Card(
+                    elevation: 4,
+                    margin:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                    child: ListTile(
+                      contentPadding: const EdgeInsets.all(16),
+                      title: Text(
+                        product.name,
+                        textDirection: TextDirection.rtl,
+                        style: const TextStyle(
+                          fontFamily: 'Vazir',
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
+                      ),
+                      subtitle: Text(
+                        'موجودی: ${item.quantity} | به‌روزرسانی: ${item.lastUpdated.toString()}',
+                        textDirection: TextDirection.rtl,
+                        style:
+                            const TextStyle(fontFamily: 'Vazir', fontSize: 14),
+                      ),
+                      trailing: IconButton(
+                        icon: const Icon(Icons.edit, color: Colors.blue),
+                        onPressed: () => setState(() {
+                          _productId = item.productId;
+                          _stock = item.quantity;
+                        }),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ],
+          ),
         ),
       ),
     );

@@ -8,5 +8,6 @@ router.get('/', productCtrl.getProducts);
 router.get('/:id', productCtrl.getProductById);
 router.put('/:id', auth(['admin', 'warehouse_manager']), productCtrl.updateProduct);
 router.delete('/:id', auth(['admin', 'warehouse_manager']), productCtrl.deleteProduct);
+router.post('/:id/images', auth(['admin', 'warehouse_manager']), productCtrl.uploadProductImages);
 
 module.exports = router;

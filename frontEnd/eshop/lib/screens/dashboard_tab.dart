@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:shop_app/models/order.dart';
+import 'package:shop_app/screens/inventory_management_screen.dart';
 import 'package:shop_app/widgets/product_card.dart';
 import '../providers/auth_provider.dart';
 import '../providers/order_provider.dart';
@@ -11,6 +12,7 @@ import 'cart_screen.dart';
 import 'profile_screen.dart';
 import 'product_management_screen.dart';
 import 'order_management_screen.dart';
+import 'category_management_screen.dart';
 
 class DashboardTab extends StatelessWidget {
   final String role;
@@ -191,6 +193,7 @@ class DashboardTab extends StatelessWidget {
     final productProvider = Provider.of<ProductProvider>(context);
     return productProvider.products.isEmpty
         ? const Center(
+            key: ValueKey('empty_products'),
             child: Text(
               'هیچ محصولی یافت نشد',
               style: TextStyle(fontFamily: 'Vazir', fontSize: 16),
@@ -198,11 +201,12 @@ class DashboardTab extends StatelessWidget {
             ),
           )
         : GridView.builder(
+            key: const ValueKey('products_grid'),
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
             gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: 2,
-              childAspectRatio: 0.75,
+              childAspectRatio: 0.6,
               crossAxisSpacing: 12,
               mainAxisSpacing: 12,
             ),
@@ -213,36 +217,25 @@ class DashboardTab extends StatelessWidget {
   }
 
   Widget _buildMenuTabContent(BuildContext context, String role) {
-    final productProvider = Provider.of<ProductProvider>(context);
     switch (selectedMenuTab) {
       case 'products':
         return _buildProductsContent(context);
       case 'cart':
-        return const CartScreen();
+        return const CartScreen(key: ValueKey('cart'));
       case 'profile':
-        return const ProfileScreen();
+        return const ProfileScreen(key: ValueKey('profile'));
       case 'category':
-        return const Center(
-          child: Text(
-            'مدیریت دسته‌بندی‌ها - در حال توسعه',
-            style: TextStyle(fontFamily: 'Vazir', fontSize: 16),
-            textDirection: TextDirection.rtl,
-          ),
-        );
+        return const CategoryManagementScreen(key: ValueKey('category'));
       case 'product_management':
-        return const ProductManagementScreen();
+        return const ProductManagementScreen(
+            key: ValueKey('product_management'));
       case 'inventory':
-        return const Center(
-          child: Text(
-            'مدیریت انبار - در حال توسعه',
-            style: TextStyle(fontFamily: 'Vazir', fontSize: 16),
-            textDirection: TextDirection.rtl,
-          ),
-        );
+        return const InventoryManagementScreen(key: ValueKey('inventory'));
       case 'orders':
-        return const OrderManagementScreen();
+        return const OrderManagementScreen(key: ValueKey('orders'));
       default:
         return const Center(
+          key: ValueKey('invalid_tab'),
           child: Text(
             'تب نامعتبر',
             style: TextStyle(fontFamily: 'Vazir', fontSize: 16),
@@ -286,9 +279,8 @@ class DashboardTab extends StatelessWidget {
               offset: const Offset(0, 3),
             ),
           ],
-          border: isSelected
-              ? Border.all(color: Colors.white, width: 2)
-              : Border.all(color: Colors.transparent),
+          border: Border.all(
+              color: isSelected ? Colors.white : Colors.transparent, width: 2),
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,

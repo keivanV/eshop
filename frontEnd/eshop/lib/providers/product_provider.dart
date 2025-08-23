@@ -1,4 +1,6 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import '../services/api_service.dart';
 import '../models/product.dart';
 
@@ -65,6 +67,18 @@ class ProductProvider with ChangeNotifier {
     } catch (e) {
       debugPrint('Error deleting product: $e');
       throw Exception('خطا در حذف محصول: $e');
+    }
+  }
+
+  Future<void> uploadProductImages(
+      String productId, List<XFile> images, String token) async {
+    try {
+      debugPrint('Uploading images for product: $productId');
+      await ApiService.uploadProductImages(productId, images, token);
+      await fetchProducts();
+    } catch (e) {
+      debugPrint('Error uploading product images: $e');
+      throw Exception('خطا در آپلود تصاویر: $e');
     }
   }
 }

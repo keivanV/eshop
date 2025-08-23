@@ -38,8 +38,7 @@ class Product {
   }
 
   Map<String, dynamic> toJson() {
-    return {
-      '_id': id,
+    final Map<String, dynamic> data = {
       'name': name,
       'price': price,
       'category': categoryId,
@@ -47,6 +46,11 @@ class Product {
       'description': description,
       'imageUrls': imageUrls,
     };
+    // Only include '_id' if it's not empty (i.e., for updates)
+    if (id.isNotEmpty) {
+      data['_id'] = id;
+    }
+    return data;
   }
 
   @override

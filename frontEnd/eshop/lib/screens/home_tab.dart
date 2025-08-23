@@ -79,13 +79,14 @@ class HomeTab extends StatelessWidget {
             tab: 'edit_profile',
             isSelected: selectedHomeTab == 'edit_profile',
           ),
-          _buildMenuCard(
-            context: context,
-            icon: FontAwesomeIcons.listCheck,
-            label: 'روند سفارشات',
-            tab: 'order_progress',
-            isSelected: selectedHomeTab == 'order_progress',
-          ),
+          if (role == 'user') // فقط برای نقش user نمایش داده شود
+            _buildMenuCard(
+              context: context,
+              icon: FontAwesomeIcons.listCheck,
+              label: 'روند سفارشات',
+              tab: 'order_progress',
+              isSelected: selectedHomeTab == 'order_progress',
+            ),
           _buildMenuCard(
             context: context,
             icon: FontAwesomeIcons.chartPie,

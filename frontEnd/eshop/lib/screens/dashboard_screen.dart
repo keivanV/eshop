@@ -2,15 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:curved_navigation_bar/curved_navigation_bar.dart';
+import 'package:shop_app/services/api_service.dart';
 import '../providers/auth_provider.dart';
 import '../providers/order_provider.dart';
 import '../providers/product_provider.dart';
 import '../routes/app_routes.dart';
 import '../constants.dart';
-import '../services/api_service.dart';
-import 'home_tab.dart';
-import 'orders_tab.dart';
-import 'dashboard_tab.dart';
+import '../screens/home_tab.dart';
+import '../screens/orders_tab.dart';
+import '../screens/cart_screen.dart';
+import '../screens/admin_dashboard_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -25,8 +26,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   String _errorMessage = '';
   bool _isInitialized = false;
   String _selectedTab = 'home';
-  String _selectedMenuTab = 'products';
-  String _selectedHomeTab = 'edit_profile';
+  String _selectedHomeTab = 'products';
   bool _userDataError = false;
   String _userDataErrorMessage = '';
 
@@ -64,20 +64,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
     try {
       debugPrint('Fetching products, orders, and user data...');
       await Future.wait([
-        productProvider.fetchProducts().then((_) {
-          debugPrint('Products fetched: ${productProvider.products.length}');
-        }),
-        orderProvider
-            .fetchOrders(
-          authProvider.token ?? '',
-          authProvider.role ?? 'user',
-          authProvider.userId ?? '',
-        )
-            .then((_) {
-          debugPrint('Orders fetched: ${orderProvider.orders.length}');
-          debugPrint(
-              'Order statuses: ${orderProvider.orders.map((o) => o.status.toString()).toList()}');
-        }),
+        productProvider.fetchProducts(),
+        orderProvider.fetchOrders(authProvider.token ?? '',
+            authProvider.role ?? 'user', authProvider.userId ?? ''),
       ]);
 
       try {
@@ -89,7 +78,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         debugPrint('Error fetching user data: $e');
         setState(() {
           _userDataError = true;
-          _userDataErrorMessage = e.toString().replaceFirst('Exception: ', '');
+          _userDataErrorMessage = _formatErrorMessage(e.toString());
           _usernameController.text = authProvider.userId ?? '';
           _emailController.text = '';
         });
@@ -105,10 +94,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
         setState(() {
           _isLoading = false;
           _hasError = true;
-          _errorMessage = e.toString().replaceFirst('Exception: ', '');
+          _errorMessage = _formatErrorMessage(e.toString());
         });
       }
       debugPrint('Error in fetchData: $e');
+    }
+  }
+
+  String _formatErrorMessage(String error) {
+    if (error.contains('403')) {
+      return 'عدم دسترسی: لطفاً دوباره وارد شوید';
+    } else if (error.contains('404')) {
+      return 'داده‌ای یافت نشد';
+    } else {
+      return error.replaceFirst('Exception: ', '');
     }
   }
 
@@ -145,8 +144,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-              'خطا در به‌روزرسانی اطلاعات: ${e.toString().replaceFirst('Exception: ', '')}',
-              textDirection: TextDirection.rtl),
+            'خطا در به‌روزرسانی اطلاعات: ${_formatErrorMessage(e.toString())}',
+            textDirection: TextDirection.rtl,
+          ),
         ),
       );
     }
@@ -156,6 +156,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Widget build(BuildContext context) {
     final authProvider = Provider.of<AuthProvider>(context);
     final role = authProvider.role ?? 'user';
+
+    // Redirect admin to AdminDashboardScreen
+    if (role == 'admin') {
+      return const AdminDashboardScreen();
+    }
 
     if (_isLoading) {
       return const Scaffold(
@@ -207,10 +212,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
         padding: const EdgeInsets.all(16.0),
         child: AnimatedSwitcher(
           duration: const Duration(milliseconds: 400),
-          transitionBuilder: (child, animation) => FadeTransition(
-            opacity: animation,
-            child: child,
-          ),
+          transitionBuilder: (child, animation) =>
+              FadeTransition(opacity: animation, child: child),
           child: _buildTabContent(context, role),
         ),
       ),
@@ -233,9 +236,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 color: Colors.white, size: 28),
           ),
           AnimatedScale(
-            scale: _selectedTab == 'dashboard' ? 1.2 : 1.0,
+            scale: _selectedTab == 'cart' ? 1.2 : 1.0,
             duration: const Duration(milliseconds: 300),
-            child: const FaIcon(FontAwesomeIcons.chartBar,
+            child: const FaIcon(FontAwesomeIcons.shoppingCart,
                 color: Colors.white, size: 28),
           ),
         ],
@@ -248,8 +251,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
               _selectedTab = 'orders';
               debugPrint('Switched to orders tab');
             } else {
-              _selectedTab = 'dashboard';
-              debugPrint('Switched to dashboard tab');
+              _selectedTab = 'cart';
+              debugPrint('Switched to cart tab');
             }
           });
         },
@@ -305,117 +308,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
         );
       case 'orders':
         return const OrdersTab();
-      case 'dashboard':
-        return DashboardTab(
-          role: role,
-          selectedMenuTab: _selectedMenuTab,
-          onTabChanged: (tab) {
-            setState(() {
-              _selectedMenuTab = tab;
-            });
-          },
-        );
+      case 'cart':
+        return const CartScreen();
       default:
         return const Center(
           child: Text(
             'تب نامعتبر',
-            textDirection: TextDirection.rtl,
             style: TextStyle(fontSize: 16, fontFamily: 'Vazir'),
+            textDirection: TextDirection.rtl,
           ),
         );
     }
-  }
-
-  Widget _buildMenuCard({
-    required BuildContext context,
-    required IconData icon,
-    required String label,
-    required String tab,
-    required bool isSelected,
-    required void Function(String) onTabChanged,
-  }) {
-    return GestureDetector(
-      onTap: () {
-        debugPrint('Switching to menu tab: $tab');
-        onTabChanged(tab);
-      },
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 300),
-        width: 120,
-        height: 80,
-        margin: const EdgeInsets.symmetric(horizontal: 8),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(15),
-          gradient: LinearGradient(
-            colors: isSelected
-                ? [AppColors.accent, AppColors.primary.withOpacity(0.9)]
-                : [Colors.grey.shade200, Colors.grey.shade300],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.grey.withOpacity(isSelected ? 0.5 : 0.3),
-              spreadRadius: isSelected ? 3 : 2,
-              blurRadius: isSelected ? 8 : 5,
-              offset: const Offset(0, 3),
-            ),
-          ],
-          border: isSelected
-              ? Border.all(color: Colors.white, width: 2)
-              : Border.all(color: Colors.transparent),
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            FaIcon(
-              icon,
-              color: isSelected ? Colors.white : Colors.grey.shade700,
-              size: 28,
-            ),
-            const SizedBox(height: 6),
-            Text(
-              label,
-              style: TextStyle(
-                fontFamily: 'Vazir',
-                fontSize: 14,
-                color: isSelected ? Colors.white : Colors.grey.shade700,
-                fontWeight: FontWeight.bold,
-              ),
-              textAlign: TextAlign.center,
-              textDirection: TextDirection.rtl,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildStatRow({
-    required IconData icon,
-    required String label,
-    required String value,
-  }) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 10.0),
-      child: Row(
-        children: [
-          FaIcon(icon, color: AppColors.accent, size: 24),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              '$label: $value',
-              style: const TextStyle(
-                fontFamily: 'Vazir',
-                fontSize: 18,
-                color: Colors.black87,
-                fontWeight: FontWeight.w600,
-              ),
-              textDirection: TextDirection.rtl,
-            ),
-          ),
-        ],
-      ),
-    );
   }
 }
