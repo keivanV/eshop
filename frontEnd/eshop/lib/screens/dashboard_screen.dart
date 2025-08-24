@@ -1,4 +1,3 @@
-
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
@@ -27,7 +26,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   bool _hasError = false;
   String _errorMessage = '';
   bool _isInitialized = false;
-  String _selectedTab = 'home';
+  String _selectedTab = 'orders';
   String _selectedHomeTab = 'edit_profile';
   bool _userDataError = false;
   String _userDataErrorMessage = '';
@@ -58,7 +57,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
     }
     _isInitialized = true;
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    final productProvider = Provider.of<ProductProvider>(context, listen: false);
+    final productProvider =
+        Provider.of<ProductProvider>(context, listen: false);
     final orderProvider = Provider.of<OrderProvider>(context, listen: false);
 
     try {
