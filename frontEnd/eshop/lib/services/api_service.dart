@@ -147,7 +147,7 @@ class ApiService {
         'خطا در دریافت محصولات: ${response.statusCode} - ${response.body}');
   }
 
-  static Future<void> createProduct(Product product, String token) async {
+  static Future<String> createProduct(Product product, String token) async {
     final baseUrl = _cleanBaseUrl();
     final response = await http.post(
       Uri.parse('$baseUrl/api/products'),
@@ -157,10 +157,14 @@ class ApiService {
       },
       body: json.encode(product.toJson()),
     );
-    if (response.statusCode != 201) {
-      throw Exception(
-          'خطا در ایجاد محصول: ${response.statusCode} - ${response.body}');
+    if (response.statusCode == 201) {
+      final data = json.decode(response.body);
+      final productId = data['_id'].toString();
+      await updateInventory(productId, product.stock, token);
+      return productId;
     }
+    throw Exception(
+        'خطا در ایجاد محصول: ${response.statusCode} - ${response.body}');
   }
 
   static Future<void> updateProduct(
@@ -174,10 +178,12 @@ class ApiService {
       },
       body: json.encode(product.toJson()),
     );
-    if (response.statusCode != 200) {
-      throw Exception(
-          'خطا در به‌روزرسانی محصول: ${response.statusCode} - ${response.body}');
+    if (response.statusCode == 200) {
+      await updateInventory(id, product.stock, token);
+      return;
     }
+    throw Exception(
+        'خطا در به‌روزرسانی محصول: ${response.statusCode} - ${response.body}');
   }
 
   static Future<void> deleteProduct(String id, String token) async {
@@ -196,7 +202,6 @@ class ApiService {
       String productId, List<XFile> images, String token) async {
     final baseUrl = _cleanBaseUrl();
     final uploadUrl = '$baseUrl/api/products/$productId/images';
-    print('Uploading images to: $uploadUrl');
     final request = http.MultipartRequest(
       'POST',
       Uri.parse(uploadUrl),
@@ -205,12 +210,7 @@ class ApiService {
     for (var file in images) {
       final filePath = file.path;
       final ext = filePath.split('.').last.toLowerCase();
-      final mimeType = ext == 'png'
-          ? 'image/png'
-          : ext == 'jpg' || ext == 'jpeg'
-              ? 'image/jpeg'
-              : file.mimeType ?? 'image/png';
-      print('Adding file: $filePath, MIME type: $mimeType');
+      final mimeType = ext == 'png' ? 'image/png' : 'image/jpeg';
       request.files.add(
         await http.MultipartFile.fromPath(
           'images',
@@ -222,7 +222,6 @@ class ApiService {
 
     final streamedResponse = await request.send();
     final response = await http.Response.fromStream(streamedResponse);
-    print('Response status: ${response.statusCode}, body: ${response.body}');
     if (response.statusCode != 200) {
       throw Exception('خطا در آپلود تصاویر: ${response.body}');
     }
@@ -243,6 +242,52 @@ class ApiService {
         'خطا در دریافت موجودی انبار: ${response.statusCode} - ${response.body}');
   }
 
+  static Future<Map<String, dynamic>> getInventoryByProduct(
+      String productId, String token) async {
+    final baseUrl = _cleanBaseUrl();
+
+    for (int attempt = 1; attempt <= 3; attempt++) {
+      try {
+        final response = await http.get(
+          Uri.parse('$baseUrl/api/inventory/$productId'),
+          headers: {
+            'Authorization': 'Bearer $token',
+            'Content-Type': 'application/json',
+          },
+        );
+
+        if (response.statusCode == 200) {
+          return json.decode(response.body);
+        } else if (response.statusCode == 401) {
+          throw Exception('Unauthorized: Invalid or expired token');
+        } else if (response.statusCode == 403) {
+          throw Exception('Forbidden: User role not authorized');
+        } else if (response.statusCode == 404) {
+
+          if (attempt < 3) {
+            await Future.delayed(const Duration(milliseconds: 500));
+            continue;
+          }
+          return {
+            'product': productId,
+            'quantity': 0,
+            'lastUpdated': DateTime.now().toIso8601String()
+          };
+        } else {
+          throw Exception(
+              'Failed to fetch inventory: ${response.statusCode} - ${response.body}');
+        }
+      } catch (e) {
+        if (attempt < 3) {
+          await Future.delayed(const Duration(milliseconds: 500));
+          continue;
+        }
+        throw Exception('Error fetching inventory after retries: $e');
+      }
+    }
+    throw Exception('Failed to fetch inventory after all retries');
+  }
+
   static Future<void> updateInventory(
       String productId, int quantity, String token) async {
     final baseUrl = _cleanBaseUrl();
@@ -260,19 +305,36 @@ class ApiService {
     }
   }
 
-  static Future<List<Order>> getOrders(String token) async {
+  static Future<List<dynamic>> getOrders(String token,
+      [String role = '', String userId = '']) async {
     final baseUrl = _cleanBaseUrl();
+    final url = role == 'admin'
+        ? '$baseUrl/api/orders'
+        : '$baseUrl/api/orders/user/$userId';
     final response = await http.get(
-      Uri.parse('$baseUrl/api/orders'),
-      headers: {'Authorization': 'Bearer $token'},
+      Uri.parse(url),
+      headers: {
+        'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json',
+      },
     );
     if (response.statusCode == 200) {
-      return (json.decode(response.body) as List)
-          .map((e) => Order.fromJson(e))
-          .toList();
+      final data = jsonDecode(response.body);
+      if (data == null) {
+        return [];
+      }
+      if (data is! List) {
+        throw Exception('فرمت پاسخ سرور نامعتبر است');
+      }
+      return data;
+    } else if (response.statusCode == 403) {
+      throw Exception('عدم دسترسی: توکن نامعتبر است');
+    } else if (response.statusCode == 404) {
+      return [];
+    } else {
+      throw Exception(
+          'خطا در دریافت سفارشات: ${response.statusCode} - ${response.body}');
     }
-    throw Exception(
-        'خطا در دریافت سفارشات: ${response.statusCode} - ${response.body}');
   }
 
   static Future<void> createOrder(
@@ -355,7 +417,6 @@ class ApiService {
       String userId, String token, String username, String email) async {
     final baseUrl = _cleanBaseUrl();
     try {
-      print('Updating user $userId with username: $username, email: $email');
       final response = await http.put(
         Uri.parse('$baseUrl/api/users/$userId'),
         headers: {
@@ -367,15 +428,12 @@ class ApiService {
           'email': email,
         }),
       );
-      print(
-          'Update response status: ${response.statusCode}, body: ${response.body}');
       if (response.statusCode == 200) {
         return jsonDecode(response.body);
       }
       throw Exception(
           'Failed to update user: ${response.statusCode} - ${response.body}');
     } catch (e) {
-      print('Update user error: $e');
       rethrow;
     }
   }
@@ -413,20 +471,29 @@ class ApiService {
       String userId, String token) async {
     final baseUrl = _cleanBaseUrl();
     try {
-      print('Fetching user data for userId: $userId with token: $token');
       final response = await http.get(
         Uri.parse('$baseUrl/api/users/$userId'),
         headers: {'Authorization': 'Bearer $token'},
       );
-      print('Response status: ${response.statusCode}, body: ${response.body}');
       if (response.statusCode == 200) {
         return jsonDecode(response.body);
       }
       throw Exception(
           'Failed to fetch user: ${response.statusCode} - ${response.body}');
     } catch (e) {
-      print('Get user error: $e');
       rethrow;
     }
+  }
+
+  static Future<dynamic> getProductById(String productId, String token) async {
+    final baseUrl = _cleanBaseUrl();
+    final response = await http.get(
+      Uri.parse('$baseUrl/api/products/$productId'),
+      headers: {'Authorization': 'Bearer $token'},
+    );
+    if (response.statusCode == 200) {
+      return json.decode(response.body);
+    }
+    return null; // Handle 404 gracefully
   }
 }

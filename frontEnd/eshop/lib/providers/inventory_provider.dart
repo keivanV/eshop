@@ -11,7 +11,7 @@ class InventoryProvider with ChangeNotifier {
     try {
       debugPrint('Fetching inventory...');
       final response = await ApiService.getInventory(token);
-      print('Inventory response: $response'); // لاگ برای دیباگ
+      debugPrint('Inventory response: $response');
       final newInventory = (response as List<dynamic>)
           .map((json) {
             if (json is Map<String, dynamic>) {
@@ -35,6 +35,25 @@ class InventoryProvider with ChangeNotifier {
     } catch (e) {
       debugPrint('Error fetching inventory: $e');
       throw Exception('خطا در دریافت موجودی انبار: $e');
+    }
+  }
+
+  Future<InventoryItem> fetchInventoryByProduct(
+      String productId, String token) async {
+    try {
+      debugPrint('Fetching inventory for product: $productId');
+      final response = await ApiService.getInventoryByProduct(productId, token);
+      if (response == null) {
+        debugPrint('No inventory found for product: $productId');
+        throw Exception('موجودی برای محصول $productId یافت نشد');
+      }
+      final inventoryItem = InventoryItem.fromJson(response);
+      debugPrint(
+          'Inventory fetched for product $productId: ${inventoryItem.quantity}');
+      return inventoryItem;
+    } catch (e) {
+      debugPrint('Error fetching inventory for product $productId: $e');
+      throw Exception('خطا در دریافت موجودی محصول: $e');
     }
   }
 

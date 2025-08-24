@@ -1,3 +1,4 @@
+
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
@@ -11,7 +12,7 @@ const app = express();
 // Middleware
 app.use(cors({ origin: '*' })); // Allow all origins for testing; restrict in production
 app.use(express.json());
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+app.use('/uploads', express.static(path.join(__dirname, 'Uploads')));
 
 // Routes
 app.use('/api/auth', require('./routes/auth.routes'));
@@ -24,9 +25,11 @@ app.use('/api/users', require('./routes/user.routes'));
 // DB Connection
 require('./config/db')();
 
-// Seed roles and admin on startup
+// Seed roles, admin, and inventory on startup
 const { seedRolesAndAdmin } = require('./utils/seed');
+const { initializeInventory } = require('./utils/seed_inventory');
 seedRolesAndAdmin();
+initializeInventory();
 
 // 404 Handler
 app.use((req, res, next) => {

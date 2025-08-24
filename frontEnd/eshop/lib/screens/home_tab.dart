@@ -1,3 +1,4 @@
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
@@ -79,7 +80,7 @@ class HomeTab extends StatelessWidget {
             tab: 'edit_profile',
             isSelected: selectedHomeTab == 'edit_profile',
           ),
-          if (role == 'user') // فقط برای نقش user نمایش داده شود
+          if (role == 'user')
             _buildMenuCard(
               context: context,
               icon: FontAwesomeIcons.listCheck,

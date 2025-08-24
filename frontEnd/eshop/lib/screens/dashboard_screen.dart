@@ -1,8 +1,8 @@
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:curved_navigation_bar/curved_navigation_bar.dart';
-import 'package:shop_app/services/api_service.dart';
 import '../providers/auth_provider.dart';
 import '../providers/order_provider.dart';
 import '../providers/product_provider.dart';
@@ -11,7 +11,9 @@ import '../constants.dart';
 import '../screens/home_tab.dart';
 import '../screens/orders_tab.dart';
 import '../screens/cart_screen.dart';
+import '../screens/products_tab.dart';
 import '../screens/admin_dashboard_screen.dart';
+import '../services/api_service.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -26,7 +28,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   String _errorMessage = '';
   bool _isInitialized = false;
   String _selectedTab = 'home';
-  String _selectedHomeTab = 'products';
+  String _selectedHomeTab = 'edit_profile';
   bool _userDataError = false;
   String _userDataErrorMessage = '';
 
@@ -37,7 +39,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
   @override
   void initState() {
     super.initState();
-    debugPrint('DashboardScreen initState');
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _fetchData();
     });
@@ -57,12 +58,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
     }
     _isInitialized = true;
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    final productProvider =
-        Provider.of<ProductProvider>(context, listen: false);
+    final productProvider = Provider.of<ProductProvider>(context, listen: false);
     final orderProvider = Provider.of<OrderProvider>(context, listen: false);
 
     try {
-      debugPrint('Fetching products, orders, and user data...');
       await Future.wait([
         productProvider.fetchProducts(),
         orderProvider.fetchOrders(authProvider.token ?? '',
@@ -75,7 +74,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
         }
         await _fetchUserData(authProvider);
       } catch (e) {
-        debugPrint('Error fetching user data: $e');
         setState(() {
           _userDataError = true;
           _userDataErrorMessage = _formatErrorMessage(e.toString());
@@ -157,7 +155,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final authProvider = Provider.of<AuthProvider>(context);
     final role = authProvider.role ?? 'user';
 
-    // Redirect admin to AdminDashboardScreen
     if (role == 'admin') {
       return const AdminDashboardScreen();
     }
@@ -230,6 +227,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 color: Colors.white, size: 28),
           ),
           AnimatedScale(
+            scale: _selectedTab == 'products' ? 1.2 : 1.0,
+            duration: const Duration(milliseconds: 300),
+            child: const FaIcon(FontAwesomeIcons.store,
+                color: Colors.white, size: 28),
+          ),
+          AnimatedScale(
             scale: _selectedTab == 'orders' ? 1.2 : 1.0,
             duration: const Duration(milliseconds: 300),
             child: const FaIcon(FontAwesomeIcons.boxOpen,
@@ -246,13 +249,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
           setState(() {
             if (index == 0) {
               _selectedTab = 'home';
-              debugPrint('Switched to home tab');
             } else if (index == 1) {
+              _selectedTab = 'products';
+            } else if (index == 2) {
               _selectedTab = 'orders';
-              debugPrint('Switched to orders tab');
             } else {
               _selectedTab = 'cart';
-              debugPrint('Switched to cart tab');
             }
           });
         },
@@ -306,6 +308,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
             });
           },
         );
+      case 'products':
+        return const ProductsTab();
       case 'orders':
         return const OrdersTab();
       case 'cart':

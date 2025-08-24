@@ -4,15 +4,13 @@ import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import '../providers/order_provider.dart';
 import '../providers/product_provider.dart';
-import '../providers/inventory_provider.dart';
 import '../providers/category_provider.dart';
 import '../routes/app_routes.dart';
 import '../constants.dart';
 import '../screens/category_management_screen.dart';
-import '../screens/product_management_screen.dart';
-import '../screens/inventory_management_screen.dart';
 import '../screens/order_management_screen.dart';
 import '../screens/user_management_screen.dart';
+import '../screens/product_edit_screen.dart';
 
 class AdminDashboardScreen extends StatefulWidget {
   const AdminDashboardScreen({super.key});
@@ -26,11 +24,24 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   bool _hasError = false;
   String _errorMessage = '';
   int _selectedIndex = 0;
+  final TextEditingController _searchController = TextEditingController();
+  String? _selectedCategoryId;
+  static const String _baseUrl =
+      'http://localhost:5000'; // Adjust for production
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) => _fetchData());
+    _searchController.addListener(() {
+      setState(() {}); // Update UI on search input change
+    });
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
   }
 
   Future<void> _fetchData() async {
@@ -38,8 +49,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     final productProvider =
         Provider.of<ProductProvider>(context, listen: false);
     final orderProvider = Provider.of<OrderProvider>(context, listen: false);
-    final inventoryProvider =
-        Provider.of<InventoryProvider>(context, listen: false);
     final categoryProvider =
         Provider.of<CategoryProvider>(context, listen: false);
 
@@ -48,7 +57,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         productProvider.fetchProducts(),
         orderProvider.fetchOrders(
             authProvider.token!, 'admin', authProvider.userId!),
-        inventoryProvider.fetchInventory(authProvider.token!),
         categoryProvider.fetchCategories(),
       ]);
       if (mounted) setState(() => _isLoading = false);
@@ -68,6 +76,43 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       return 'عدم دسترسی: لطفاً با حساب مدیر وارد شوید';
     if (error.contains('404')) return 'داده‌ای یافت نشد';
     return error.replaceFirst('Exception: ', '');
+  }
+
+  Future<void> _deleteProduct(String productId) async {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final productProvider =
+        Provider.of<ProductProvider>(context, listen: false);
+
+    try {
+      await productProvider.deleteProduct(productId, authProvider.token!);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'محصول با موفقیت حذف شد',
+              style: TextStyle(fontFamily: 'Vazir'),
+              textDirection: TextDirection.rtl,
+            ),
+            backgroundColor: AppColors.accent,
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'خطا در حذف محصول: ${e.toString().replaceFirst('Exception: ', '')}',
+              style: const TextStyle(fontFamily: 'Vazir'),
+              textDirection: TextDirection.rtl,
+            ),
+            backgroundColor: Colors.redAccent,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+    }
   }
 
   @override
@@ -128,7 +173,14 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         child: BottomNavigationBar(
           currentIndex: _selectedIndex,
           onTap: (index) {
-            setState(() => _selectedIndex = index);
+            setState(() {
+              _selectedIndex = index;
+              // Clear filters when switching tabs
+              if (_selectedIndex != 1) {
+                _searchController.clear();
+                _selectedCategoryId = null;
+              }
+            });
           },
           backgroundColor: Colors.transparent,
           elevation: 0,
@@ -142,13 +194,21 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           items: [
             _buildNavItem(FontAwesomeIcons.thList, 'دسته‌بندی‌ها'),
             _buildNavItem(FontAwesomeIcons.box, 'محصولات'),
-            _buildNavItem(FontAwesomeIcons.warehouse, 'انبار'),
             _buildNavItem(FontAwesomeIcons.boxOpen, 'سفارشات'),
             _buildNavItem(FontAwesomeIcons.users, 'کاربران'),
             _buildNavItem(FontAwesomeIcons.chartPie, 'آمار'),
           ],
         ),
       ),
+      floatingActionButton: _selectedIndex == 1
+          ? FloatingActionButton(
+              onPressed: () {
+                Navigator.pushNamed(context, AppRoutes.productEdit);
+              },
+              backgroundColor: AppColors.accent,
+              child: const FaIcon(FontAwesomeIcons.plus, color: Colors.white),
+            )
+          : null,
       backgroundColor: Colors.grey.shade100,
     );
   }
@@ -171,14 +231,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   }
 
   int _getIndexForLabel(String label) {
-    const labels = [
-      'دسته‌بندی‌ها',
-      'محصولات',
-      'انبار',
-      'سفارشات',
-      'کاربران',
-      'آمار'
-    ];
+    const labels = ['دسته‌بندی‌ها', 'محصولات', 'سفارشات', 'کاربران', 'آمار'];
     return labels.indexOf(label);
   }
 
@@ -246,18 +299,202 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   }
 
   Widget _getTabContent() {
+    final productProvider = Provider.of<ProductProvider>(context);
+    final categoryProvider = Provider.of<CategoryProvider>(context);
+
     switch (_selectedIndex) {
       case 0:
         return const CategoryManagementScreen();
       case 1:
-        return const ProductManagementScreen();
+        final filteredProducts = productProvider.products.where((product) {
+          final matchesSearch = _searchController.text.isEmpty ||
+              product.name
+                  .toLowerCase()
+                  .contains(_searchController.text.toLowerCase());
+          final matchesCategory = _selectedCategoryId == null ||
+              product.categoryId == _selectedCategoryId;
+          return matchesSearch && matchesCategory;
+        }).toList();
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            TextField(
+              controller: _searchController,
+              decoration: InputDecoration(
+                labelText: 'جستجو بر اساس نام محصول',
+                labelStyle: const TextStyle(fontFamily: 'Vazir'),
+                prefixIcon: const Icon(Icons.search, color: AppColors.accent),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              textDirection: TextDirection.rtl,
+            ),
+            const SizedBox(height: 16),
+            DropdownButtonFormField<String>(
+              value: _selectedCategoryId,
+              decoration: InputDecoration(
+                labelText: 'فیلتر بر اساس دسته‌بندی',
+                labelStyle: const TextStyle(fontFamily: 'Vazir'),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              items: [
+                const DropdownMenuItem(
+                  value: null,
+                  child: Text(
+                    'همه دسته‌بندی‌ها',
+                    style: TextStyle(fontFamily: 'Vazir'),
+                    textDirection: TextDirection.rtl,
+                  ),
+                ),
+                ...categoryProvider.categories
+                    .map((category) => DropdownMenuItem(
+                          value: category.id,
+                          child: Text(
+                            category.name,
+                            style: const TextStyle(fontFamily: 'Vazir'),
+                            textDirection: TextDirection.rtl,
+                          ),
+                        )),
+              ],
+              onChanged: (value) {
+                setState(() {
+                  _selectedCategoryId = value;
+                });
+              },
+            ),
+            const SizedBox(height: 16),
+            Expanded(
+              child: filteredProducts.isEmpty
+                  ? const Center(
+                      child: Text(
+                        'محصولی یافت نشد',
+                        style: TextStyle(
+                            fontFamily: 'Vazir',
+                            fontSize: 16,
+                            color: Colors.grey),
+                        textDirection: TextDirection.rtl,
+                      ),
+                    )
+                  : ListView.builder(
+                      itemCount: filteredProducts.length,
+                      itemBuilder: (context, index) {
+                        final product = filteredProducts[index];
+                        return Card(
+                          elevation: 4,
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12)),
+                          margin: const EdgeInsets.symmetric(vertical: 8),
+                          child: ListTile(
+                            leading: product.imageUrls != null &&
+                                    product.imageUrls!.isNotEmpty
+                                ? Image.network(
+                                    '$_baseUrl${product.imageUrls![0]}',
+                                    width: 50,
+                                    height: 50,
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (context, error, stackTrace) {
+                                      print(
+                                          'Image load error for $_baseUrl${product.imageUrls![0]}: $error');
+                                      return const Icon(Icons.broken_image,
+                                          size: 50);
+                                    },
+                                  )
+                                : const Icon(Icons.image, size: 50),
+                            title: Text(
+                              product.name,
+                              style: const TextStyle(
+                                  fontFamily: 'Vazir',
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600),
+                              textDirection: TextDirection.rtl,
+                            ),
+                            subtitle: Text(
+                              'قیمت: ${product.price.toStringAsFixed(0)} تومان',
+                              style: const TextStyle(
+                                  fontFamily: 'Vazir',
+                                  fontSize: 14,
+                                  color: Colors.grey),
+                              textDirection: TextDirection.rtl,
+                            ),
+                            trailing: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                IconButton(
+                                  icon: const FaIcon(FontAwesomeIcons.edit,
+                                      color: AppColors.accent),
+                                  onPressed: () {
+                                    Navigator.pushNamed(
+                                      context,
+                                      AppRoutes.productEdit,
+                                      arguments: product.id,
+                                    );
+                                  },
+                                ),
+                                IconButton(
+                                  icon: const FaIcon(FontAwesomeIcons.trash,
+                                      color: Colors.redAccent),
+                                  onPressed: () {
+                                    showDialog(
+                                      context: context,
+                                      builder: (context) => AlertDialog(
+                                        title: const Text(
+                                          'تأیید حذف',
+                                          style: TextStyle(
+                                              fontFamily: 'Vazir',
+                                              fontWeight: FontWeight.bold),
+                                          textDirection: TextDirection.rtl,
+                                        ),
+                                        content: Text(
+                                          'آیا مطمئن هستید که می‌خواهید "${product.name}" را حذف کنید؟',
+                                          style: const TextStyle(
+                                              fontFamily: 'Vazir'),
+                                          textDirection: TextDirection.rtl,
+                                        ),
+                                        actions: [
+                                          TextButton(
+                                            onPressed: () =>
+                                                Navigator.pop(context),
+                                            child: const Text(
+                                              'لغو',
+                                              style: TextStyle(
+                                                  fontFamily: 'Vazir'),
+                                            ),
+                                          ),
+                                          TextButton(
+                                            onPressed: () {
+                                              Navigator.pop(context);
+                                              _deleteProduct(product.id);
+                                            },
+                                            child: const Text(
+                                              'حذف',
+                                              style: TextStyle(
+                                                  fontFamily: 'Vazir',
+                                                  color: Colors.redAccent),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    );
+                                  },
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+            ),
+          ],
+        );
       case 2:
-        return const InventoryManagementScreen();
-      case 3:
         return const OrderManagementScreen();
-      case 4:
+      case 3:
         return const UserManagementScreen();
-      case 5:
+      case 4:
         return _buildStatsTab();
       default:
         return const Center(
@@ -273,7 +510,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   Widget _buildStatsTab() {
     final productProvider = Provider.of<ProductProvider>(context);
     final orderProvider = Provider.of<OrderProvider>(context);
-    final inventoryProvider = Provider.of<InventoryProvider>(context);
     final categoryProvider = Provider.of<CategoryProvider>(context);
 
     return Column(
@@ -310,12 +546,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                     productProvider.products.length.toString()),
                 _buildStatRow(FontAwesomeIcons.boxOpen, 'سفارشات',
                     orderProvider.orders.length.toString()),
-                _buildStatRow(
-                    FontAwesomeIcons.warehouse,
-                    'موجودی',
-                    inventoryProvider.inventory
-                        .fold(0, (sum, item) => sum + item.quantity)
-                        .toString()),
                 _buildStatRow(FontAwesomeIcons.thList, 'دسته‌بندی‌ها',
                     categoryProvider.categories.length.toString()),
               ],

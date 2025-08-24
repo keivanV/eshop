@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import '../services/api_service.dart';
 import '../models/order.dart';
+import '../services/api_service.dart';
 
 class OrderProvider with ChangeNotifier {
   List<Order> _orders = [];
@@ -15,18 +15,28 @@ class OrderProvider with ChangeNotifier {
     }
     _isFetching = true;
     try {
-      debugPrint('Fetching orders...');
-      final newOrders = await ApiService.getOrders(token);
-      if (_orders.length != newOrders.length ||
-          _orders.any((o) => !newOrders.contains(o))) {
-        _orders = newOrders;
-        debugPrint('Orders fetched: ${_orders.length}');
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          notifyListeners();
-        });
+      debugPrint(
+          'Fetching orders with token: $token, role: $role, userId: $userId');
+      final response = await ApiService.getOrders(token, role, userId);
+      debugPrint('Raw orders response: $response');
+
+      if (response.isEmpty) {
+        debugPrint('No orders found');
+        _orders = [];
       } else {
-        debugPrint('No changes in orders, skipping notifyListeners');
+        _orders = response.map((data) {
+          if (data == null || data['_id'] == null) {
+            debugPrint('Invalid order data: $data');
+            throw Exception('داده سفارش نامعتبر است: ID یافت نشد');
+          }
+          return Order.fromJson(data);
+        }).toList();
       }
+
+      debugPrint('Orders fetched: ${_orders.length}');
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        notifyListeners();
+      });
     } catch (e) {
       debugPrint('Error fetching orders: $e');
       throw Exception('خطا در دریافت سفارشات: $e');
@@ -42,7 +52,6 @@ class OrderProvider with ChangeNotifier {
           'Creating order with ${products.length} items, total: $totalAmount');
       await ApiService.createOrder(products, totalAmount, token);
       debugPrint('Order created successfully');
-      // fetchOrders غیرفعال شده تا از حلقه جلوگیری بشه
     } catch (e) {
       debugPrint('Error creating order: $e');
       throw Exception('خطا در ثبت سفارش: $e');
@@ -55,7 +64,6 @@ class OrderProvider with ChangeNotifier {
       debugPrint('Updating order status for order $id to $status');
       await ApiService.updateOrderStatus(id, status, token);
       debugPrint('Order status updated successfully');
-      // آپدیت محلی به‌جای فراخوانی fetchOrders
       final index = _orders.indexWhere((order) => order.id == id);
       if (index != -1) {
         _orders[index] = Order(
@@ -82,7 +90,6 @@ class OrderProvider with ChangeNotifier {
       debugPrint('Cancelling order $id');
       await ApiService.cancelOrder(id, token);
       debugPrint('Order cancelled successfully');
-      // آپدیت محلی
       final index = _orders.indexWhere((order) => order.id == id);
       if (index != -1) {
         _orders[index] = Order(
@@ -109,7 +116,6 @@ class OrderProvider with ChangeNotifier {
       debugPrint('Requesting return for order $id');
       await ApiService.requestReturn(id, token);
       debugPrint('Return requested successfully');
-      // آپدیت محلی
       final index = _orders.indexWhere((order) => order.id == id);
       if (index != -1) {
         _orders[index] = Order(

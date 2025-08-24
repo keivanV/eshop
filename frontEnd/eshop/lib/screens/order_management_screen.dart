@@ -1,6 +1,8 @@
+// lib/screens/order_management_screen.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import '../models/order.dart';
 import '../models/product.dart';
 import '../providers/order_provider.dart';
@@ -41,7 +43,8 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> {
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     try {
       debugPrint('Starting fetchOrders...');
-      await orderProvider.fetchOrders(authProvider.token!, '', '');
+      await orderProvider.fetchOrders(
+          authProvider.token ?? '', 'admin', authProvider.userId ?? '');
       if (mounted) {
         setState(() {
           _isLoading = false;
@@ -278,12 +281,46 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> {
               ),
             ]
           : orders.map((order) {
+              // Check if order is "new" (created within last 24 hours and pending)
+              final isNewOrder = order.status == OrderStatus.pending &&
+                  DateTime.now().difference(order.createdAt).inHours <= 24;
+
               return ListTile(
-                title: Text(
-                  'سفارش #${order.id}',
-                  textDirection: TextDirection.rtl,
-                  style: const TextStyle(
-                      fontFamily: 'Vazir', fontWeight: FontWeight.bold),
+                title: Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    if (isNewOrder)
+                      Padding(
+                        padding: const EdgeInsets.only(left: 8.0),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: AppColors.accent,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: const Text(
+                            'جدید',
+                            style: TextStyle(
+                              fontFamily: 'Vazir',
+                              fontSize: 12,
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ),
+                    Expanded(
+                      child: Text(
+                        'سفارش #${order.id}',
+                        textDirection: TextDirection.rtl,
+                        style: const TextStyle(
+                          fontFamily: 'Vazir',
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
                 subtitle: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -315,32 +352,55 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> {
                         style: TextStyle(fontFamily: 'Vazir', fontSize: 14),
                       ),
                       children: order.products.map((item) {
-                        final product = productProvider.products.firstWhere(
-                          (p) => p.id == item.productId,
-                          orElse: () => Product(
-                            id: item.productId,
-                            name: 'نامشخص',
-                            price: 0.0,
-                            categoryId: '',
-                            stock: 0,
-                          ),
-                        );
+                        final product = productProvider.products.isNotEmpty
+                            ? productProvider.products.firstWhere(
+                                (p) => p.id == item.productId,
+                                orElse: () => Product(
+                                  id: item.productId,
+                                  name: 'محصول حذف شده',
+                                  price: 0.0,
+                                  categoryId: '',
+                                  stock: 0,
+                                ),
+                              )
+                            : Product(
+                                id: item.productId,
+                                name: 'محصول حذف شده',
+                                price: 0.0,
+                                categoryId: '',
+                                stock: 0,
+                              );
                         return ListTile(
                           leading: product.imageUrls != null &&
                                   product.imageUrls!.isNotEmpty
                               ? ClipRRect(
                                   borderRadius: BorderRadius.circular(8),
-                                  child: Image.network(
-                                    product.imageUrls!.first,
+                                  child: CachedNetworkImage(
+                                    imageUrl:
+                                        '${AppConfig.apiBaseUrl.replaceAll('/api', '')}${product.imageUrls!.first}',
                                     width: 40,
                                     height: 40,
                                     fit: BoxFit.cover,
-                                    errorBuilder:
-                                        (context, error, stackTrace) =>
-                                            const Icon(Icons.broken_image),
+                                    placeholder: (context, url) => Container(
+                                      width: 40,
+                                      height: 40,
+                                      color: Colors.grey[200],
+                                      child: const Center(
+                                        child: CircularProgressIndicator(
+                                          valueColor: AlwaysStoppedAnimation(
+                                              AppColors.accent),
+                                        ),
+                                      ),
+                                    ),
+                                    errorWidget: (context, url, error) {
+                                      debugPrint(
+                                          'Image load error for ${AppConfig.apiBaseUrl.replaceAll('/api', '')}${product.imageUrls!.first}: $error');
+                                      return const Icon(Icons.broken_image,
+                                          size: 40);
+                                    },
                                   ),
                                 )
-                              : const Icon(Icons.image_not_supported),
+                              : const Icon(Icons.image_not_supported, size: 40),
                           title: Text(
                             product.name,
                             textDirection: TextDirection.rtl,

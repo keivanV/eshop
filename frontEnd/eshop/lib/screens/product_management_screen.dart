@@ -8,6 +8,7 @@ import '../constants.dart';
 import '../providers/auth_provider.dart';
 import '../providers/product_provider.dart';
 import '../providers/category_provider.dart';
+import '../providers/inventory_provider.dart';
 import '../models/product.dart';
 import '../models/category.dart';
 
@@ -82,6 +83,9 @@ class _ProductManagementScreenState extends State<ProductManagementScreen> {
   String _formatErrorMessage(String error) {
     if (error.contains('403')) return 'عدم دسترسی';
     if (error.contains('404')) return 'محصول یافت نشد';
+    if (error.contains('Inventory not found')) {
+      return 'موجودی برای محصول یافت نشد. لطفاً موجودی را به‌روزرسانی کنید.';
+    }
     return error.replaceFirst('Exception: ', '');
   }
 
@@ -127,6 +131,8 @@ class _ProductManagementScreenState extends State<ProductManagementScreen> {
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     final productProvider =
         Provider.of<ProductProvider>(context, listen: false);
+    final inventoryProvider =
+        Provider.of<InventoryProvider>(context, listen: false);
     try {
       final product = Product(
         id: _editingProductId ?? '',
@@ -140,41 +146,40 @@ class _ProductManagementScreenState extends State<ProductManagementScreen> {
         imageUrls: _editingProductId != null ? _existingImageUrls : [],
       );
 
+      String newProductId;
       if (_editingProductId != null) {
         await productProvider.updateProduct(
             _editingProductId!, product, authProvider.token!);
+        newProductId = _editingProductId!;
         if (_selectedImages.isNotEmpty) {
           await productProvider.uploadProductImages(
               _editingProductId!, _selectedImages, authProvider.token!);
         }
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('محصول ویرایش شد',
-                  textDirection: TextDirection.rtl,
-                  style: TextStyle(fontFamily: 'Vazir')),
-              backgroundColor: AppColors.accent,
-            ),
-          );
-        }
       } else {
-        await productProvider.createProduct(product, authProvider.token!);
-        final newProductId = productProvider.products.last.id;
-        debugPrint('New product ID: $newProductId');
+        newProductId =
+            await productProvider.createProduct(product, authProvider.token!);
         if (_selectedImages.isNotEmpty) {
           await productProvider.uploadProductImages(
               newProductId, _selectedImages, authProvider.token!);
         }
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('محصول اضافه شد',
-                  textDirection: TextDirection.rtl,
-                  style: TextStyle(fontFamily: 'Vazir')),
-              backgroundColor: AppColors.accent,
-            ),
-          );
-        }
+      }
+
+      // Ensure inventory is updated
+      await inventoryProvider.updateInventory(
+          newProductId, product.stock, authProvider.token!);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+                _editingProductId != null
+                    ? 'محصول ویرایش شد'
+                    : 'محصول اضافه شد',
+                textDirection: TextDirection.rtl,
+                style: const TextStyle(fontFamily: 'Vazir')),
+            backgroundColor: AppColors.accent,
+          ),
+        );
       }
       _clearForm();
     } catch (e) {

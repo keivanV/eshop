@@ -1,3 +1,4 @@
+// lib/screens/cart_screen.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
@@ -9,6 +10,7 @@ import '../providers/order_provider.dart';
 import '../providers/auth_provider.dart';
 import '../routes/app_routes.dart';
 import '../constants.dart';
+import '../services/api_service.dart';
 
 class CartScreen extends StatefulWidget {
   const CartScreen({super.key});
@@ -21,6 +23,62 @@ class _CartScreenState extends State<CartScreen> {
   bool _isLoading = false;
   bool _hasError = false;
   String _errorMessage = '';
+
+  Future<bool> _checkInventory(
+      List<MapEntry<String, int>> items, String token) async {
+    try {
+      final productProvider =
+          Provider.of<ProductProvider>(context, listen: false);
+      for (var entry in items) {
+        debugPrint('Checking product: ${entry.key}, quantity: ${entry.value}');
+        final product = await ApiService.getProductById(entry.key, token);
+        if (product == null) {
+          debugPrint('Product not found: ${entry.key}');
+          setState(() {
+            _hasError = true;
+            _errorMessage = 'محصول ${entry.key} یافت نشد';
+          });
+          return false;
+        }
+        final cachedProduct = productProvider.products.firstWhere(
+          (p) => p.id == entry.key,
+          orElse: () => Product(
+            id: entry.key,
+            name: product['name'] ?? 'نامشخص',
+            price: product['price']?.toDouble() ?? 0.0,
+            categoryId: product['category']?['_id'] ?? '',
+            stock: product['stock']?.toInt() ?? 0,
+          ),
+        );
+        debugPrint(
+            'Product found: ${product['name']}, cached stock: ${cachedProduct.stock}');
+        final inventory =
+            await ApiService.getInventoryByProduct(entry.key, token);
+        final inventoryQuantity =
+            inventory['quantity']?.toInt() ?? cachedProduct.stock;
+        debugPrint(
+            'Inventory response: $inventory, using quantity: $inventoryQuantity');
+        if (inventoryQuantity < entry.value) {
+          debugPrint(
+              'Insufficient inventory for product: ${entry.key}, required: ${entry.value}, available: $inventoryQuantity');
+          setState(() {
+            _hasError = true;
+            _errorMessage =
+                'موجودی کافی برای محصول ${product['name']} وجود ندارد (موجود: $inventoryQuantity)';
+          });
+          return false;
+        }
+      }
+      return true;
+    } catch (e) {
+      debugPrint('Error checking inventory: $e');
+      setState(() {
+        _hasError = true;
+        _errorMessage = 'خطا در بررسی موجودی: $e';
+      });
+      return false;
+    }
+  }
 
   @override
   void initState() {
@@ -50,10 +108,33 @@ class _CartScreenState extends State<CartScreen> {
           backgroundColor: AppColors.primary,
         ),
         body: Center(
-          child: Text(
-            'خطا: $_errorMessage',
-            textDirection: TextDirection.rtl,
-            style: const TextStyle(fontSize: 16, fontFamily: 'Vazir'),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                'خطا: $_errorMessage',
+                textDirection: TextDirection.rtl,
+                style: const TextStyle(fontSize: 16, fontFamily: 'Vazir'),
+              ),
+              const SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: () {
+                  setState(() {
+                    _hasError = false;
+                    _errorMessage = '';
+                  });
+                },
+                child: const Text(
+                  'تلاش مجدد',
+                  style: TextStyle(fontFamily: 'Vazir'),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.accent,
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
+                ),
+              ),
+            ],
           ),
         ),
       );
@@ -143,7 +224,7 @@ class _CartScreenState extends State<CartScreen> {
                                 fontWeight: FontWeight.bold),
                           ),
                           subtitle: Text(
-                            'تعداد: ${entry.value} | قیمت: ${(product.price * entry.value).toStringAsFixed(0)} تومان',
+                            'تعداد: ${entry.value} | قیمت: ${(product.price * entry.value).toStringAsFixed(0)} تومان | موجودی: ${product.stock}',
                             textDirection: TextDirection.rtl,
                             style: const TextStyle(fontFamily: 'Vazir'),
                           ),
@@ -189,6 +270,15 @@ class _CartScreenState extends State<CartScreen> {
                           _isLoading = true;
                         });
                         try {
+                          debugPrint(
+                              'Checking inventory before creating order');
+                          final inventoryValid = await _checkInventory(
+                              cartProvider.items.entries.toList(),
+                              authProvider.token!);
+                          if (!inventoryValid) {
+                            return; // Error message set in _checkInventory
+                          }
+
                           debugPrint('Creating order from cart');
                           final total = cartProvider
                               .getTotalAmount(productProvider.products);
@@ -215,8 +305,11 @@ class _CartScreenState extends State<CartScreen> {
                         } catch (e) {
                           setState(() {
                             _hasError = true;
-                            _errorMessage =
-                                e.toString().replaceFirst('Exception: ', '');
+                            _errorMessage = e
+                                .toString()
+                                .replaceFirst('Exception: ', '')
+                                .replaceFirst(
+                                    RegExp(r'400 - {"msg":"[^"]+"}'), '');
                           });
                         } finally {
                           setState(() {

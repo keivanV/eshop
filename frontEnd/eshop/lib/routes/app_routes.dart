@@ -11,6 +11,7 @@ import '../screens/inventory_management_screen.dart';
 import '../screens/order_management_screen.dart';
 import '../screens/profile_screen.dart';
 import '../screens/dashboard_screen.dart';
+import '../screens/product_edit_screen.dart';
 
 class AppRoutes {
   static const String login = '/login';
@@ -25,8 +26,11 @@ class AppRoutes {
   static const String orderManagement = '/order_management';
   static const String profile = '/profile';
   static const String dashboard = '/dashboard';
+  static const String productEdit = '/product_edit';
 
   static Route<dynamic> generateRoute(RouteSettings settings) {
+    debugPrint(
+        'Generating route: ${settings.name}, arguments: ${settings.arguments}');
     switch (settings.name) {
       case login:
         return MaterialPageRoute(builder: (_) => const LoginScreen());
@@ -39,9 +43,46 @@ class AppRoutes {
       case productList:
         return MaterialPageRoute(builder: (_) => const ProductListScreen());
       case productDetail:
-        final args = settings.arguments as Map<String, dynamic>;
+        String productId;
+        if (settings.arguments is String) {
+          productId = settings.arguments as String;
+        } else if (settings.arguments is Map<String, dynamic>?) {
+          productId =
+              (settings.arguments as Map<String, dynamic>?)?['productId']
+                      ?.toString() ??
+                  '';
+        } else {
+          debugPrint(
+              'Invalid arguments for product_detail: ${settings.arguments}');
+          return MaterialPageRoute(
+            builder: (_) => const Scaffold(
+              body: Center(
+                child: Text(
+                  'خطا: پارامترهای نامعتبر برای صفحه محصول',
+                  textDirection: TextDirection.rtl,
+                  style: TextStyle(fontFamily: 'Vazir', fontSize: 16),
+                ),
+              ),
+            ),
+          );
+        }
+        if (productId.isEmpty) {
+          debugPrint('Empty productId for product_detail');
+          return MaterialPageRoute(
+            builder: (_) => const Scaffold(
+              body: Center(
+                child: Text(
+                  'خطا: شناسه محصول نامعتبر است',
+                  textDirection: TextDirection.rtl,
+                  style: TextStyle(fontFamily: 'Vazir', fontSize: 16),
+                ),
+              ),
+            ),
+          );
+        }
         return MaterialPageRoute(
-            builder: (_) => ProductDetailScreen(productId: args['productId']));
+          builder: (_) => ProductDetailScreen(productId: productId),
+        );
       case productManagement:
         return MaterialPageRoute(
             builder: (_) => const ProductManagementScreen());
@@ -57,10 +98,23 @@ class AppRoutes {
         return MaterialPageRoute(builder: (_) => const ProfileScreen());
       case dashboard:
         return MaterialPageRoute(builder: (_) => const DashboardScreen());
+      case productEdit:
+        final args = settings.arguments as String?;
+        return MaterialPageRoute(
+          builder: (_) => ProductEditScreen(productId: args),
+        );
       default:
         return MaterialPageRoute(
-            builder: (_) =>
-                const Scaffold(body: Center(child: Text('Page not found'))));
+          builder: (_) => const Scaffold(
+            body: Center(
+              child: Text(
+                'مسیر نامعتبر',
+                textDirection: TextDirection.rtl,
+                style: TextStyle(fontFamily: 'Vazir', fontSize: 16),
+              ),
+            ),
+          ),
+        );
     }
   }
 }

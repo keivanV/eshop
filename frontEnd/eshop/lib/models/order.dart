@@ -7,9 +7,19 @@ class OrderItem {
   OrderItem({required this.productId, required this.quantity});
 
   factory OrderItem.fromJson(Map<String, dynamic> json) {
+
+    String productId;
+    if (json['product'] is Map<String, dynamic>) {
+      productId = json['product']['_id']?.toString() ?? '';
+    } else {
+      productId = json['product']?.toString() ?? '';
+    }
+    if (productId.isEmpty) {
+
+    }
     return OrderItem(
-      productId: json['product']['_id'] ?? json['product'] ?? '',
-      quantity: json['quantity'] ?? 0,
+      productId: productId,
+      quantity: (json['quantity'] is num ? json['quantity'].toInt() : 0),
     );
   }
 
@@ -47,19 +57,28 @@ class Order {
   });
 
   factory Order.fromJson(Map<String, dynamic> json) {
+   
+    if (json['_id'] == null) {
+
+      throw Exception('داده سفارش نامعتبر است: ID یافت نشد');
+    }
     return Order(
-      id: json['_id'] ?? '',
-      userId: json['user']['_id'] ?? json['user'] ?? '',
+      id: json['_id'].toString(),
+      userId: json['user'] is Map<String, dynamic>
+          ? json['user']['_id']?.toString() ?? 'unknown'
+          : json['user']?.toString() ?? 'unknown',
       products: (json['products'] as List<dynamic>?)
-              ?.map((e) => OrderItem.fromJson(e))
+              ?.map((e) => OrderItem.fromJson(e as Map<String, dynamic>))
               .toList() ??
           [],
-      totalAmount: (json['totalAmount'] ?? 0).toDouble(),
+      totalAmount:
+          (json['totalAmount'] is num ? json['totalAmount'].toDouble() : 0.0),
       status: OrderStatus.values.firstWhere(
           (e) => e.toString().split('.').last == json['status'],
           orElse: () => OrderStatus.pending),
-      returnRequest: json['returnRequest'] ?? false,
-      createdAt: DateTime.parse(json['createdAt'] ?? DateTime.now().toString()),
+      returnRequest: json['returnRequest'] as bool? ?? false,
+      createdAt: DateTime.tryParse(json['createdAt']?.toString() ?? '') ??
+          DateTime.now(),
     );
   }
 

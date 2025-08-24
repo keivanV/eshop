@@ -67,6 +67,8 @@ class _InventoryManagementScreenState extends State<InventoryManagementScreen> {
       return 'عدم دسترسی: لطفاً با حساب مدیر وارد شوید';
     } else if (error.contains('404')) {
       return 'داده‌ای یافت نشد';
+    } else if (error.contains('Inventory not found')) {
+      return 'موجودی برای محصول یافت نشد. لطفاً موجودی را به‌روزرسانی کنید.';
     } else {
       return error.replaceFirst('Exception: ', '');
     }
@@ -79,6 +81,7 @@ class _InventoryManagementScreenState extends State<InventoryManagementScreen> {
         Provider.of<InventoryProvider>(context, listen: false);
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     try {
+      debugPrint('Updating inventory for product $_productId to stock $_stock');
       await inventoryProvider.updateInventory(
           _productId, _stock, authProvider.token!);
       if (mounted) {
@@ -111,6 +114,7 @@ class _InventoryManagementScreenState extends State<InventoryManagementScreen> {
           ),
         );
       }
+      debugPrint('Error updating inventory: $e');
     }
   }
 
@@ -225,7 +229,35 @@ class _InventoryManagementScreenState extends State<InventoryManagementScreen> {
                           .toList(),
                       validator: (value) =>
                           value == null ? 'لطفاً یک محصول انتخاب کنید' : null,
-                      onChanged: (value) => setState(() => _productId = value!),
+                      onChanged: (value) async {
+                        if (value == null) return;
+                        setState(() {
+                          _productId = value;
+                          _stock = 0; // Reset stock until fetched
+                        });
+                        final inventoryProvider =
+                            Provider.of<InventoryProvider>(context,
+                                listen: false);
+                        final authProvider =
+                            Provider.of<AuthProvider>(context, listen: false);
+                        try {
+                          final inventory =
+                              await inventoryProvider.fetchInventoryByProduct(
+                                  value, authProvider.token!);
+                          setState(() {
+                            _stock = inventory.quantity;
+                          });
+                        } catch (e) {
+                          // If inventory not found, use product stock
+                          final product = productProvider.products
+                              .firstWhere((p) => p.id == value);
+                          setState(() {
+                            _stock = product.stock;
+                          });
+                          debugPrint(
+                              'Inventory not found for product $value, using product stock: ${product.stock}');
+                        }
+                      },
                     ),
                     const SizedBox(height: 12),
                     TextFormField(
@@ -244,9 +276,9 @@ class _InventoryManagementScreenState extends State<InventoryManagementScreen> {
                         if (value == null || value.isEmpty) {
                           return 'لطفاً مقدار موجودی را وارد کنید';
                         }
-                        if (int.tryParse(value) == null ||
-                            int.parse(value) < 0) {
-                          return 'لطفاً یک عدد معتبر وارد کنید';
+                        final parsed = int.tryParse(value);
+                        if (parsed == null || parsed < 0) {
+                          return 'لطفاً یک عدد معتبر و غیرمنفی وارد کنید';
                         }
                         return null;
                       },
