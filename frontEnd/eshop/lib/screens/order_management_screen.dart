@@ -1,4 +1,3 @@
-// lib/screens/order_management_screen.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
@@ -43,8 +42,8 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> {
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     try {
       debugPrint('Starting fetchOrders...');
-      await orderProvider.fetchOrders(
-          authProvider.token ?? '', 'admin', authProvider.userId ?? '');
+      await orderProvider.fetchOrders(authProvider.token ?? '',
+          authProvider.role ?? 'user', authProvider.userId ?? '');
       if (mounted) {
         setState(() {
           _isLoading = false;
@@ -68,6 +67,7 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> {
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     final productProvider =
         Provider.of<ProductProvider>(context, listen: false);
+    final role = authProvider.role ?? 'user';
 
     if (_isLoading) {
       return const Scaffold(
@@ -173,36 +173,41 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> {
         child: ListView(
           padding: const EdgeInsets.all(16.0),
           children: [
-            _buildOrderGroup(
-              context: context,
-              title: 'در انتظار',
-              orders: groupedOrders[OrderStatus.pending]!,
-              icon: FontAwesomeIcons.hourglassHalf,
-              color: Colors.orange,
-              orderProvider: orderProvider,
-              authProvider: authProvider,
-              productProvider: productProvider,
-            ),
-            _buildOrderGroup(
-              context: context,
-              title: 'پردازش‌شده',
-              orders: groupedOrders[OrderStatus.processed]!,
-              icon: FontAwesomeIcons.cogs,
-              color: Colors.blue,
-              orderProvider: orderProvider,
-              authProvider: authProvider,
-              productProvider: productProvider,
-            ),
-            _buildOrderGroup(
-              context: context,
-              title: 'ارسال‌شده',
-              orders: groupedOrders[OrderStatus.shipped]!,
-              icon: FontAwesomeIcons.truckLoading,
-              color: Colors.purple,
-              orderProvider: orderProvider,
-              authProvider: authProvider,
-              productProvider: productProvider,
-            ),
+            if (role == 'admin' || role == 'warehouse_manager')
+              _buildOrderGroup(
+                context: context,
+                title: 'در انتظار',
+                orders: groupedOrders[OrderStatus.pending]!,
+                icon: FontAwesomeIcons.hourglassHalf,
+                color: Colors.orange,
+                orderProvider: orderProvider,
+                authProvider: authProvider,
+                productProvider: productProvider,
+              ),
+            if (role == 'admin' ||
+                role == 'warehouse_manager' ||
+                role == 'delivery_agent')
+              _buildOrderGroup(
+                context: context,
+                title: 'پردازش‌شده',
+                orders: groupedOrders[OrderStatus.processed]!,
+                icon: FontAwesomeIcons.cogs,
+                color: Colors.blue,
+                orderProvider: orderProvider,
+                authProvider: authProvider,
+                productProvider: productProvider,
+              ),
+            if (role == 'admin' || role == 'delivery_agent')
+              _buildOrderGroup(
+                context: context,
+                title: 'ارسال‌شده',
+                orders: groupedOrders[OrderStatus.shipped]!,
+                icon: FontAwesomeIcons.truckLoading,
+                color: Colors.purple,
+                orderProvider: orderProvider,
+                authProvider: authProvider,
+                productProvider: productProvider,
+              ),
             _buildOrderGroup(
               context: context,
               title: 'تحویل‌شده',
@@ -281,15 +286,47 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> {
               ),
             ]
           : orders.map((order) {
-              // Check if order is "new" (created within last 24 hours and pending)
-              final isNewOrder = order.status == OrderStatus.pending &&
-                  DateTime.now().difference(order.createdAt).inHours <= 24;
+              // Validate order status
+              final currentStatus = OrderStatus.values.firstWhere(
+                (status) =>
+                    status.toString().split('.').last ==
+                    order.status.toString().split('.').last,
+                orElse: () => OrderStatus
+                    .pending, // Fallback to pending if status is invalid
+              );
+
+              // Skip orders with invalid products
+              if (order.products.any((item) => item.productId == null)) {
+                debugPrint('Skipping order ${order.id} due to null product');
+                return const SizedBox.shrink();
+              }
+
+              // Define allowed statuses based on role and current order status
+              List<OrderStatus> allowedStatuses = [];
+              if (authProvider.role == 'admin') {
+                allowedStatuses = OrderStatus.values;
+              } else if (authProvider.role == 'warehouse_manager' &&
+                  currentStatus == OrderStatus.pending) {
+                allowedStatuses = [
+                  OrderStatus.processed,
+                  OrderStatus.cancelled
+                ];
+              } else if (authProvider.role == 'delivery_agent' &&
+                  (currentStatus == OrderStatus.processed ||
+                      currentStatus == OrderStatus.shipped)) {
+                allowedStatuses = [
+                  OrderStatus.delivered,
+                  if (order.returnRequest) OrderStatus.returned,
+                ];
+              }
 
               return ListTile(
                 title: Row(
                   mainAxisAlignment: MainAxisAlignment.end,
                   children: [
-                    if (isNewOrder)
+                    if (order.status == OrderStatus.pending &&
+                        DateTime.now().difference(order.createdAt).inHours <=
+                            24)
                       Padding(
                         padding: const EdgeInsets.only(left: 8.0),
                         child: Container(
@@ -416,21 +453,23 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> {
                     ),
                   ],
                 ),
-                trailing: authProvider.role == 'admin'
+                trailing: allowedStatuses.isNotEmpty
                     ? DropdownButton<OrderStatus>(
-                        value: order.status,
-                        items: OrderStatus.values
-                            .map((status) => DropdownMenuItem(
-                                  value: status,
-                                  child: Text(
-                                    status.toString().split('.').last,
-                                    textDirection: TextDirection.rtl,
-                                    style: const TextStyle(fontFamily: 'Vazir'),
-                                  ),
-                                ))
-                            .toList(),
+                        value: allowedStatuses.contains(currentStatus)
+                            ? currentStatus
+                            : allowedStatuses.firstOrNull,
+                        items: allowedStatuses.map((status) {
+                          return DropdownMenuItem<OrderStatus>(
+                            value: status,
+                            child: Text(
+                              status.toString().split('.').last,
+                              textDirection: TextDirection.rtl,
+                              style: const TextStyle(fontFamily: 'Vazir'),
+                            ),
+                          );
+                        }).toList(),
                         onChanged: (newStatus) async {
-                          if (newStatus != null && newStatus != order.status) {
+                          if (newStatus != null && newStatus != currentStatus) {
                             try {
                               debugPrint(
                                   'Updating order ${order.id} status to $newStatus');
@@ -454,7 +493,7 @@ class _OrderManagementScreenState extends State<OrderManagementScreen> {
                                   e.toString().replaceFirst('Exception: ', '');
                               if (errorMessage.contains('403')) {
                                 errorMessage =
-                                    'عدم دسترسی: لطفاً با حساب مدیر وارد شوید';
+                                    'عدم دسترسی: لطفاً با حساب مناسب وارد شوید';
                               }
                               ScaffoldMessenger.of(context)
                                   .hideCurrentSnackBar();

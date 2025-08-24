@@ -1,4 +1,4 @@
-// lib/screens/admin_dashboard_screen.dart
+
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:provider/provider.dart';
@@ -27,8 +27,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   int _selectedIndex = 0;
   final TextEditingController _searchController = TextEditingController();
   String? _selectedCategoryId;
-  static const String _baseUrl =
-      'http://localhost:5000'; // Adjust for production
+  static const String _baseUrl = 'http://localhost:5000'; // Adjust for production
 
   @override
   void initState() {
@@ -47,21 +46,21 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 
   Future<void> _fetchData() async {
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    final productProvider =
-        Provider.of<ProductProvider>(context, listen: false);
     final orderProvider = Provider.of<OrderProvider>(context, listen: false);
-    final categoryProvider =
-        Provider.of<CategoryProvider>(context, listen: false);
 
     try {
-      final futures = [
-        productProvider.fetchProducts(),
-        categoryProvider.fetchCategories(),
-      ];
-      // Only fetch orders if the user is an admin
+      final List<Future<dynamic>> futures = [];
+      if (authProvider.token == null || authProvider.userId == null) {
+        throw Exception('Token or User ID is null');
+      }
+      futures.add(orderProvider.fetchOrders(
+          authProvider.token!, authProvider.role ?? 'user', authProvider.userId!));
       if (authProvider.role == 'admin') {
-        futures.add(orderProvider.fetchOrders(
-            authProvider.token!, 'admin', authProvider.userId!));
+        final productProvider = Provider.of<ProductProvider>(context, listen: false);
+        final categoryProvider =
+            Provider.of<CategoryProvider>(context, listen: false);
+        futures.add(productProvider.fetchProducts());
+        futures.add(categoryProvider.fetchCategories());
       }
       await Future.wait(futures);
       if (mounted) setState(() => _isLoading = false);
@@ -78,7 +77,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 
   String _formatErrorMessage(String error) {
     if (error.contains('403'))
-      return 'عدم دسترسی: لطفاً با حساب مدیر وارد شوید';
+      return 'عدم دسترسی: لطفاً با حساب مناسب وارد شوید';
     if (error.contains('404')) return 'داده‌ای یافت نشد';
     return error.replaceFirst('Exception: ', '');
   }
@@ -123,21 +122,37 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   @override
   Widget build(BuildContext context) {
     final authProvider = Provider.of<AuthProvider>(context);
-    final isAdmin = authProvider.role == 'admin';
+    final role = authProvider.role ?? 'user';
 
-    // Define navigation items, excluding Orders for non-admins
-    final navItems = [
-      _buildNavItem(FontAwesomeIcons.thList, 'دسته‌بندی‌ها'),
-      _buildNavItem(FontAwesomeIcons.box, 'محصولات'),
-      if (isAdmin) _buildNavItem(FontAwesomeIcons.boxOpen, 'سفارشات'),
-      _buildNavItem(FontAwesomeIcons.users, 'کاربران'),
-      _buildNavItem(FontAwesomeIcons.chartPie, 'آمار'),
-    ];
+    List<BottomNavigationBarItem> navItems;
+    String appBarTitle;
+    if (role == 'warehouse_manager') {
+      navItems = [
+        _buildNavItem(FontAwesomeIcons.boxOpen, 'مدیریت پردازش'),
+      ];
+      appBarTitle = 'پنل مدیریت پردازش، ${authProvider.userId ?? 'کاربر'}';
+      _selectedIndex = 0;
+    } else if (role == 'delivery_agent') {
+      navItems = [
+        _buildNavItem(FontAwesomeIcons.boxOpen, 'مدیریت تحویل'),
+      ];
+      appBarTitle = 'پنل مدیریت تحویل، ${authProvider.userId ?? 'کاربر'}';
+      _selectedIndex = 0;
+    } else {
+      navItems = [
+        _buildNavItem(FontAwesomeIcons.thList, 'دسته‌بندی‌ها'),
+        _buildNavItem(FontAwesomeIcons.box, 'محصولات'),
+        _buildNavItem(FontAwesomeIcons.boxOpen, 'سفارشات'),
+        _buildNavItem(FontAwesomeIcons.users, 'کاربران'),
+        _buildNavItem(FontAwesomeIcons.chartPie, 'آمار'),
+      ];
+      appBarTitle = 'پنل مدیریت، ${authProvider.userId ?? 'کاربر'}';
+    }
 
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          'پنل مدیریت، ${authProvider.userId ?? 'ادمین'}',
+          appBarTitle,
           style: const TextStyle(
               fontFamily: 'Vazir', fontSize: 22, fontWeight: FontWeight.bold),
           textDirection: TextDirection.rtl,
@@ -173,44 +188,45 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   valueColor: AlwaysStoppedAnimation(AppColors.accent)))
           : _hasError
               ? _buildErrorWidget()
-              : _buildTabContent(),
-      bottomNavigationBar: Container(
-        decoration: BoxDecoration(
-          color: Colors.white,
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.1),
-              blurRadius: 10,
-              offset: const Offset(0, -2),
+              : _buildTabContent(role),
+      bottomNavigationBar: (role == 'warehouse_manager' || role == 'delivery_agent')
+          ? null
+          : Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.1),
+                    blurRadius: 10,
+                    offset: const Offset(0, -2),
+                  ),
+                ],
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+              ),
+              child: BottomNavigationBar(
+                currentIndex: _selectedIndex,
+                onTap: (index) {
+                  setState(() {
+                    _selectedIndex = index;
+                    if (_selectedIndex != 1) {
+                      _searchController.clear();
+                      _selectedCategoryId = null;
+                    }
+                  });
+                },
+                backgroundColor: Colors.transparent,
+                elevation: 0,
+                type: BottomNavigationBarType.fixed,
+                selectedItemColor: AppColors.accent,
+                unselectedItemColor: Colors.grey.shade600,
+                selectedLabelStyle: const TextStyle(
+                    fontFamily: 'Vazir', fontSize: 12, fontWeight: FontWeight.bold),
+                unselectedLabelStyle:
+                    const TextStyle(fontFamily: 'Vazir', fontSize: 12),
+                items: navItems,
+              ),
             ),
-          ],
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-        ),
-        child: BottomNavigationBar(
-          currentIndex: _selectedIndex,
-          onTap: (index) {
-            setState(() {
-              _selectedIndex = index;
-              // Clear filters when switching tabs
-              if (_selectedIndex != (isAdmin ? 1 : 1)) {
-                _searchController.clear();
-                _selectedCategoryId = null;
-              }
-            });
-          },
-          backgroundColor: Colors.transparent,
-          elevation: 0,
-          type: BottomNavigationBarType.fixed,
-          selectedItemColor: AppColors.accent,
-          unselectedItemColor: Colors.grey.shade600,
-          selectedLabelStyle: const TextStyle(
-              fontFamily: 'Vazir', fontSize: 12, fontWeight: FontWeight.bold),
-          unselectedLabelStyle:
-              const TextStyle(fontFamily: 'Vazir', fontSize: 12),
-          items: navItems,
-        ),
-      ),
-      floatingActionButton: _selectedIndex == 1
+      floatingActionButton: (role == 'admin' && _selectedIndex == 1)
           ? FloatingActionButton(
               onPressed: () {
                 Navigator.pushNamed(context, AppRoutes.productEdit);
@@ -242,14 +258,16 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 
   int _getIndexForLabel(String label) {
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    final isAdmin = authProvider.role == 'admin';
-    final labels = [
-      'دسته‌بندی‌ها',
-      'محصولات',
-      if (isAdmin) 'سفارشات',
-      'کاربران',
-      'آمار',
-    ];
+    final role = authProvider.role ?? 'user';
+    final labels = role == 'admin'
+        ? [
+            'دسته‌بندی‌ها',
+            'محصولات',
+            'سفارشات',
+            'کاربران',
+            'آمار',
+          ]
+        : [label];
     return labels.indexOf(label);
   }
 
@@ -295,7 +313,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     );
   }
 
-  Widget _buildTabContent() {
+  Widget _buildTabContent(String role) {
     return AnimatedSwitcher(
       duration: const Duration(milliseconds: 400),
       transitionBuilder: (child, animation) =>
@@ -305,30 +323,25 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         constraints: BoxConstraints(
           minHeight: MediaQuery.of(context).size.height -
               kToolbarHeight -
-              kBottomNavigationBarHeight -
               MediaQuery.of(context).padding.top,
         ),
         child: Padding(
           padding: const EdgeInsets.all(16.0),
-          child: _getTabContent(),
+          child: _getTabContent(role),
         ),
       ),
     );
   }
 
-  Widget _getTabContent() {
-    final authProvider = Provider.of<AuthProvider>(context);
-    final isAdmin = authProvider.role == 'admin';
+  Widget _getTabContent(String role) {
     final productProvider = Provider.of<ProductProvider>(context);
     final categoryProvider = Provider.of<CategoryProvider>(context);
 
-    // Adjust index mapping for non-admins
-    int adjustedIndex = _selectedIndex;
-    if (!isAdmin && _selectedIndex >= 2) {
-      adjustedIndex += 1; // Skip Orders tab for non-admins
+    if (role == 'warehouse_manager' || role == 'delivery_agent') {
+      return const OrderManagementScreen();
     }
 
-    switch (adjustedIndex) {
+    switch (_selectedIndex) {
       case 0:
         return const CategoryManagementScreen();
       case 1:
@@ -517,15 +530,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           ],
         );
       case 2:
-        if (!isAdmin) {
-          return const Center(
-            child: Text(
-              'عدم دسترسی: این بخش فقط برای مدیران قابل مشاهده است',
-              style: TextStyle(fontFamily: 'Vazir', fontSize: 16),
-              textDirection: TextDirection.rtl,
-            ),
-          );
-        }
         return const OrderManagementScreen();
       case 3:
         return const UserManagementScreen();

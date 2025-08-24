@@ -31,15 +31,91 @@ class DashboardTab extends StatelessWidget {
     final orderProvider = Provider.of<OrderProvider>(context);
     final productProvider = Provider.of<ProductProvider>(context);
     final totalProducts = productProvider.products.length;
+
+    // Calculate statistics based on role
+    final pendingOrders = orderProvider.orders
+        .where((o) => o.status == OrderStatus.pending)
+        .length;
     final processedOrders = orderProvider.orders
         .where((o) => o.status == OrderStatus.processed)
         .length;
-    final returnedOrders = orderProvider.orders
-        .where((o) => o.status == OrderStatus.returned)
+    final shippedOrders = orderProvider.orders
+        .where((o) => o.status == OrderStatus.shipped)
         .length;
     final deliveredOrders = orderProvider.orders
         .where((o) => o.status == OrderStatus.delivered)
         .length;
+    final returnedOrders = orderProvider.orders
+        .where((o) => o.status == OrderStatus.returned)
+        .length;
+    final cancelledOrders = orderProvider.orders
+        .where((o) => o.status == OrderStatus.cancelled)
+        .length;
+
+    // Select relevant statistics based on role
+    final stats = role == 'warehouse_manager'
+        ? [
+            _buildStatRow(
+              icon: FontAwesomeIcons.hourglassHalf,
+              label: 'سفارشات در انتظار',
+              value: pendingOrders.toString(),
+            ),
+            _buildStatRow(
+              icon: FontAwesomeIcons.cogs,
+              label: 'سفارشات پردازش‌شده',
+              value: processedOrders.toString(),
+            ),
+            _buildStatRow(
+              icon: FontAwesomeIcons.ban,
+              label: 'سفارشات لغوشده',
+              value: cancelledOrders.toString(),
+            ),
+          ]
+        : role == 'delivery_agent'
+            ? [
+                _buildStatRow(
+                  icon: FontAwesomeIcons.cogs,
+                  label: 'سفارشات پردازش‌شده',
+                  value: processedOrders.toString(),
+                ),
+                _buildStatRow(
+                  icon: FontAwesomeIcons.truckLoading,
+                  label: 'سفارشات ارسال‌شده',
+                  value: shippedOrders.toString(),
+                ),
+                _buildStatRow(
+                  icon: FontAwesomeIcons.truck,
+                  label: 'سفارشات تحویل‌شده',
+                  value: deliveredOrders.toString(),
+                ),
+                _buildStatRow(
+                  icon: FontAwesomeIcons.undo,
+                  label: 'سفارشات مرجوعی',
+                  value: returnedOrders.toString(),
+                ),
+              ]
+            : [
+                _buildStatRow(
+                  icon: FontAwesomeIcons.boxes,
+                  label: 'تعداد کل محصولات',
+                  value: totalProducts.toString(),
+                ),
+                _buildStatRow(
+                  icon: FontAwesomeIcons.cogs,
+                  label: 'سفارشات پردازش‌شده',
+                  value: processedOrders.toString(),
+                ),
+                _buildStatRow(
+                  icon: FontAwesomeIcons.undo,
+                  label: 'سفارشات مرجوعی',
+                  value: returnedOrders.toString(),
+                ),
+                _buildStatRow(
+                  icon: FontAwesomeIcons.truck,
+                  label: 'سفارشات تحویل‌شده',
+                  value: deliveredOrders.toString(),
+                ),
+              ];
 
     return SingleChildScrollView(
       child: Column(
@@ -78,7 +154,7 @@ class DashboardTab extends StatelessWidget {
                 ? _buildProductsContent(context)
                 : _buildMenuTabContent(context, role),
           ),
-          if (role == 'admin') ...[
+          if (role != 'user') ...[
             const SizedBox(height: 30),
             const Text(
               'آمار',
@@ -115,28 +191,7 @@ class DashboardTab extends StatelessWidget {
                 padding: const EdgeInsets.all(20.0),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildStatRow(
-                      icon: FontAwesomeIcons.boxes,
-                      label: 'تعداد کل محصولات',
-                      value: totalProducts.toString(),
-                    ),
-                    _buildStatRow(
-                      icon: FontAwesomeIcons.cogs,
-                      label: 'سفارشات پردازش‌شده',
-                      value: processedOrders.toString(),
-                    ),
-                    _buildStatRow(
-                      icon: FontAwesomeIcons.undo,
-                      label: 'سفارشات مرجوعی',
-                      value: returnedOrders.toString(),
-                    ),
-                    _buildStatRow(
-                      icon: FontAwesomeIcons.truck,
-                      label: 'سفارشات تحویل‌شده',
-                      value: deliveredOrders.toString(),
-                    ),
-                  ],
+                  children: stats,
                 ),
               ),
             ),
@@ -174,16 +229,13 @@ class DashboardTab extends StatelessWidget {
               isSelected: selectedMenuTab == 'inventory',
             ),
           ],
-          if (role == 'admin' ||
-              role == 'warehouse_manager' ||
-              role == 'delivery_agent')
-            _buildMenuCard(
-              context: context,
-              icon: FontAwesomeIcons.boxOpen,
-              label: 'سفارشات',
-              tab: 'orders',
-              isSelected: selectedMenuTab == 'orders',
-            ),
+          _buildMenuCard(
+            context: context,
+            icon: FontAwesomeIcons.boxOpen,
+            label: 'سفارشات',
+            tab: 'orders',
+            isSelected: selectedMenuTab == 'orders',
+          ),
         ],
       ),
     );

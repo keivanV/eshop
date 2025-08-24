@@ -1,3 +1,4 @@
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
@@ -62,16 +63,21 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final orderProvider = Provider.of<OrderProvider>(context, listen: false);
 
     try {
-      await Future.wait([
-        productProvider.fetchProducts(),
-        orderProvider.fetchOrders(authProvider.token ?? '',
-            authProvider.role ?? 'user', authProvider.userId ?? ''),
-      ]);
+      // Define futures as List<Future<dynamic>> to explicitly type it
+      final List<Future<dynamic>> futures = [];
+      // For non-admin roles, only fetch orders
+      if (authProvider.token == null || authProvider.userId == null) {
+        throw Exception('Token or User ID is null');
+      }
+      futures.add(orderProvider.fetchOrders(
+          authProvider.token!, authProvider.role ?? 'user', authProvider.userId!));
+      // For user role, also fetch products
+      if (authProvider.role == 'user') {
+        futures.add(productProvider.fetchProducts());
+      }
+      await Future.wait(futures);
 
       try {
-        if (authProvider.userId == null || authProvider.token == null) {
-          throw Exception('User ID or token is null');
-        }
         await _fetchUserData(authProvider);
       } catch (e) {
         setState(() {
@@ -155,7 +161,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final authProvider = Provider.of<AuthProvider>(context);
     final role = authProvider.role ?? 'user';
 
-    if (role == 'admin') {
+    // Redirect to AdminDashboardScreen for admin, warehouse_manager, delivery_agent
+    if (['admin', 'warehouse_manager', 'delivery_agent'].contains(role)) {
       return const AdminDashboardScreen();
     }
 

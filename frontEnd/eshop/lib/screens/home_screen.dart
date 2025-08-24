@@ -4,6 +4,7 @@ import 'package:curved_navigation_bar/curved_navigation_bar.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import '../providers/auth_provider.dart';
 import '../providers/product_provider.dart';
+import '../providers/order_provider.dart'; // Added for fetching orders
 import '../widgets/product_card.dart';
 import '../routes/app_routes.dart';
 import '../constants.dart';
@@ -38,9 +39,18 @@ class _HomeScreenState extends State<HomeScreen> {
     _isInitialized = true;
     final productProvider =
         Provider.of<ProductProvider>(context, listen: false);
+    final orderProvider = Provider.of<OrderProvider>(context, listen: false);
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
     try {
-      debugPrint('Starting fetchProducts...');
-      await productProvider.fetchProducts();
+      debugPrint('Starting fetchProducts and fetchOrders...');
+      final List<Future<dynamic>> futures = [];
+      futures.add(productProvider.fetchProducts());
+      futures.add(orderProvider.fetchOrders(
+        authProvider.token ?? '',
+        authProvider.role ?? 'user',
+        authProvider.userId ?? '',
+      ));
+      await Future.wait(futures);
       if (mounted) {
         setState(() {
           _isLoading = false;

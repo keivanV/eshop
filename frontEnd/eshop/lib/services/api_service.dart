@@ -263,7 +263,6 @@ class ApiService {
         } else if (response.statusCode == 403) {
           throw Exception('Forbidden: User role not authorized');
         } else if (response.statusCode == 404) {
-
           if (attempt < 3) {
             await Future.delayed(const Duration(milliseconds: 500));
             continue;
@@ -308,9 +307,8 @@ class ApiService {
   static Future<List<dynamic>> getOrders(String token,
       [String role = '', String userId = '']) async {
     final baseUrl = _cleanBaseUrl();
-    final url = role == 'admin'
-        ? '$baseUrl/api/orders'
-        : '$baseUrl/api/orders/user/$userId';
+    final url =
+        '$baseUrl/api/orders'; // Always use /api/orders, backend filters by role
     final response = await http.get(
       Uri.parse(url),
       headers: {

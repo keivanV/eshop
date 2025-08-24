@@ -62,7 +62,18 @@ exports.createOrder = async (req, res) => {
 exports.getOrders = async (req, res) => {
   try {
     let query = {};
-    if (req.user.role.name === 'user') query.user = req.user._id;
+    const userRole = req.user.role.name;
+
+    if (userRole === 'user') {
+      query.user = req.user._id;
+    } else if (userRole === 'warehouse_manager') {
+      query.status = { $in: ['pending', 'processed'] }; // Updated to include both pending and processed
+    } else if (userRole === 'delivery_agent') {
+      query.status = { $in: ['processed', 'shipped'] };
+    } else if (userRole !== 'admin') {
+      return res.status(403).json({ msg: 'Access denied' });
+    }
+
     const orders = await Order.find(query).populate('products.product').populate('user');
     res.json(orders);
   } catch (error) {
@@ -89,9 +100,16 @@ exports.cancelOrder = async (req, res) => {
   try {
     const order = await Order.findById(req.params.id);
     if (!order) return res.status(404).json({ msg: 'Order not found' });
-    if (order.user.toString() !== req.user._id.toString() || order.status !== 'pending') {
+
+    const userRole = req.user.role.name;
+    if (userRole === 'user' && (order.user.toString() !== req.user._id.toString() || order.status !== 'pending')) {
       return res.status(403).json({ msg: 'Cannot cancel' });
+    } else if (userRole === 'warehouse_manager' && order.status !== 'pending') {
+      return res.status(403).json({ msg: 'Cannot cancel non-pending orders' });
+    } else if (!['user', 'warehouse_manager'].includes(userRole)) {
+      return res.status(403).json({ msg: 'Access denied' });
     }
+
     order.status = 'cancelled';
     await order.save();
 
@@ -140,14 +158,30 @@ exports.updateOrderStatus = async (req, res) => {
     if (!order) return res.status(404).json({ msg: 'Order not found' });
 
     const userRole = req.user.role.name;
-    if (userRole === 'admin') {
-      order.status = status;
-    } else if (userRole === 'warehouse_manager' && ['processed', 'shipped'].includes(status)) {
-      order.status = status;
-    } else if (userRole === 'delivery_agent' && status === 'delivered') {
-      order.status = status;
-    } else if (userRole === 'warehouse_manager' && status === 'returned' && order.returnRequest) {
-      order.status = status;
+    const allowedTransitions = {
+      'warehouse_manager': {
+        from: ['pending'],
+        to: ['processed', 'cancelled']
+      },
+      'delivery_agent': {
+        from: ['processed', 'shipped'],
+        to: ['delivered', 'returned']
+      },
+      'admin': { from: ['pending', 'processed', 'shipped', 'delivered', 'returned', 'cancelled'], to: ['pending', 'processed', 'shipped', 'delivered', 'returned', 'cancelled'] }
+    };
+
+    if (!allowedTransitions[userRole] || !allowedTransitions[userRole].from.includes(order.status) || !allowedTransitions[userRole].to.includes(status)) {
+      return res.status(403).json({ msg: 'Access denied or invalid status transition' });
+    }
+
+    if (status === 'returned' && !order.returnRequest) {
+      return res.status(403).json({ msg: 'Cannot return without request' });
+    }
+
+    order.status = status;
+    await order.save();
+
+    if (status === 'returned') {
       // Restore stock for returned items
       for (const item of order.products) {
         const inventory = await Inventory.findOne({ product: item.product });
@@ -162,10 +196,8 @@ exports.updateOrderStatus = async (req, res) => {
           await product.save();
         }
       }
-    } else {
-      return res.status(403).json({ msg: 'Access denied' });
     }
-    await order.save();
+
     res.json(order);
   } catch (error) {
     console.error('Error updating order status:', error);
