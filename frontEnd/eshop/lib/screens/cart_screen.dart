@@ -1,7 +1,7 @@
-// lib/screens/cart_screen.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:animate_do/animate_do.dart';
 import '../models/product.dart';
 import '../models/order.dart';
 import '../providers/cart_provider.dart';
@@ -19,10 +19,36 @@ class CartScreen extends StatefulWidget {
   _CartScreenState createState() => _CartScreenState();
 }
 
-class _CartScreenState extends State<CartScreen> {
+class _CartScreenState extends State<CartScreen>
+    with SingleTickerProviderStateMixin {
   bool _isLoading = false;
   bool _hasError = false;
   String _errorMessage = '';
+  late AnimationController _animationController;
+  late Animation<double> _fadeAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    debugPrint('CartScreen initState');
+    _animationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1200),
+    );
+    _fadeAnimation = CurvedAnimation(
+      parent: _animationController,
+      curve: Curves.easeInOutCubic,
+    );
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _animationController.forward();
+    });
+  }
+
+  @override
+  void dispose() {
+    _animationController.dispose();
+    super.dispose();
+  }
 
   Future<bool> _checkInventory(
       List<MapEntry<String, int>> items, String token) async {
@@ -71,19 +97,45 @@ class _CartScreenState extends State<CartScreen> {
       }
       return true;
     } catch (e) {
+      String errorMessage = e.toString().replaceFirst('Exception: ', '');
       debugPrint('Error checking inventory: $e');
+      if (errorMessage.contains('Unauthorized: Invalid or expired token')) {
+        _handleTokenExpiration();
+        return false;
+      }
       setState(() {
         _hasError = true;
-        _errorMessage = 'خطا در بررسی موجودی: $e';
+        _errorMessage = 'خطا در بررسی موجودی: $errorMessage';
       });
       return false;
     }
   }
 
-  @override
-  void initState() {
-    super.initState();
-    debugPrint('CartScreen initState');
+  void _handleTokenExpiration() async {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: const Text(
+          'توکن شما منقضی شده، لطفاً مجدد وارد شوید',
+          textDirection: TextDirection.rtl,
+          style:
+              TextStyle(fontFamily: 'Vazir', fontSize: 14, color: Colors.white),
+        ),
+        backgroundColor: Colors.red.shade600,
+        duration: const Duration(seconds: 3),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      ),
+    );
+    await authProvider.logout();
+    if (mounted) {
+      Navigator.pushNamedAndRemoveUntil(
+        context,
+        AppRoutes.login,
+        (route) => false,
+      );
+    }
   }
 
   @override
@@ -94,76 +146,23 @@ class _CartScreenState extends State<CartScreen> {
     final orderProvider = Provider.of<OrderProvider>(context, listen: false);
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
 
-    debugPrint('Building CartScreen');
     if (_isLoading) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
+      return Scaffold(
+        body: Center(child: _buildCustomLoader()),
       );
     }
 
     if (_hasError) {
       return Scaffold(
-        appBar: AppBar(
-          title: const Text('سبد خرید', style: TextStyle(fontFamily: 'Vazir')),
-          backgroundColor: AppColors.primary,
-        ),
-        body: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text(
-                'خطا: $_errorMessage',
-                textDirection: TextDirection.rtl,
-                style: const TextStyle(fontSize: 16, fontFamily: 'Vazir'),
-              ),
-              const SizedBox(height: 16),
-              ElevatedButton(
-                onPressed: () {
-                  setState(() {
-                    _hasError = false;
-                    _errorMessage = '';
-                  });
-                },
-                child: const Text(
-                  'تلاش مجدد',
-                  style: TextStyle(fontFamily: 'Vazir'),
-                ),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.accent,
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12)),
-                ),
-              ),
-            ],
-          ),
-        ),
+        appBar: _buildAppBar(),
+        body: Center(child: _buildErrorCard()),
       );
     }
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('سبد خرید', style: TextStyle(fontFamily: 'Vazir')),
-        backgroundColor: AppColors.primary,
-        actions: [
-          IconButton(
-            icon: const FaIcon(FontAwesomeIcons.signOutAlt),
-            tooltip: 'خروج',
-            onPressed: () async {
-              await authProvider.logout();
-              Navigator.pushNamedAndRemoveUntil(
-                  context, AppRoutes.login, (route) => false);
-            },
-          ),
-        ],
-      ),
+      appBar: _buildAppBar(),
       body: cartProvider.items.isEmpty
-          ? const Center(
-              child: Text(
-                'سبد خرید شما خالی است',
-                textDirection: TextDirection.rtl,
-                style: TextStyle(fontSize: 16, fontFamily: 'Vazir'),
-              ),
-            )
+          ? Center(child: _buildEmptyCartCard())
           : Consumer<CartProvider>(
               builder: (ctx, cartProvider, _) {
                 debugPrint('Rendering cart items');
@@ -186,57 +185,117 @@ class _CartScreenState extends State<CartScreen> {
                             product.imageUrls!.isNotEmpty
                         ? product.imageUrls!.first
                         : 'https://placehold.co/50x50';
-                    return Dismissible(
-                      key: Key(entry.key),
-                      direction: DismissDirection.endToStart,
-                      onDismissed: (_) {
-                        debugPrint('Removing ${entry.key} from cart');
-                        cartProvider.removeItem(entry.key);
-                      },
-                      background: Container(
-                        color: Colors.red,
-                        alignment: Alignment.centerRight,
-                        padding: const EdgeInsets.only(right: 20),
-                        child: const FaIcon(FontAwesomeIcons.trash,
-                            color: Colors.white),
-                      ),
-                      child: Card(
-                        elevation: 4,
-                        shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12)),
-                        child: ListTile(
-                          leading: ClipRRect(
-                            borderRadius: BorderRadius.circular(8),
-                            child: Image.network(
-                              imageUrl,
-                              width: 50,
-                              height: 50,
-                              fit: BoxFit.cover,
-                              errorBuilder: (context, error, stackTrace) =>
-                                  const Icon(Icons.broken_image),
+                    return FadeInUp(
+                      duration: const Duration(milliseconds: 600),
+                      delay: Duration(milliseconds: 200 * i),
+                      child: Dismissible(
+                        key: Key(entry.key),
+                        direction: DismissDirection.endToStart,
+                        onDismissed: (_) {
+                          debugPrint('Removing ${entry.key} from cart');
+                          cartProvider.removeItem(entry.key);
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                'محصول ${product.name} از سبد خرید حذف شد',
+                                textDirection: TextDirection.rtl,
+                                style: const TextStyle(
+                                    fontFamily: 'Vazir',
+                                    fontSize: 12,
+                                    color: Colors.white),
+                              ),
+                              backgroundColor: Colors.red.shade600,
+                              duration: const Duration(seconds: 2),
+                              behavior: SnackBarBehavior.floating,
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(10)),
                             ),
+                          );
+                        },
+                        background: Container(
+                          color: Colors.red.shade600,
+                          alignment: Alignment.centerRight,
+                          padding: const EdgeInsets.only(right: 16),
+                          child: const FaIcon(FontAwesomeIcons.trash,
+                              color: Colors.white, size: 24),
+                        ),
+                        child: Card(
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                            side: BorderSide(color: Colors.black87, width: 1.5),
                           ),
-                          title: Text(
-                            product.name,
-                            textDirection: TextDirection.rtl,
-                            style: const TextStyle(
-                                fontFamily: 'Vazir',
-                                fontWeight: FontWeight.bold),
-                          ),
-                          subtitle: Text(
-                            'تعداد: ${entry.value} | قیمت: ${(product.price * entry.value).toStringAsFixed(0)} تومان | موجودی: ${product.stock}',
-                            textDirection: TextDirection.rtl,
-                            style: const TextStyle(fontFamily: 'Vazir'),
-                          ),
-                          trailing: IconButton(
-                            icon: const FaIcon(FontAwesomeIcons.minusCircle,
-                                color: Colors.red),
-                            onPressed: () {
-                              debugPrint(
-                                  'Updating quantity for ${entry.key} to ${entry.value - 1}');
-                              cartProvider.updateQuantity(
-                                  entry.key, entry.value - 1);
-                            },
+                          color: Colors.white,
+                          child: Padding(
+                            padding: const EdgeInsets.all(8.0),
+                            child: ListTile(
+                              leading: ClipRRect(
+                                borderRadius: BorderRadius.circular(8),
+                                child: Image.network(
+                                  imageUrl,
+                                  width: 48,
+                                  height: 48,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (context, error, stackTrace) =>
+                                      const FaIcon(
+                                    FontAwesomeIcons.image,
+                                    color: Colors.grey,
+                                    size: 32,
+                                  ),
+                                ),
+                              ),
+                              title: Text(
+                                product.name,
+                                textDirection: TextDirection.rtl,
+                                style: const TextStyle(
+                                  fontFamily: 'Vazir',
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16,
+                                  color: AppColors.primary,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              subtitle: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    'تعداد: ${entry.value} | قیمت: ${(product.price * entry.value).toStringAsFixed(0)} تومان',
+                                    textDirection: TextDirection.rtl,
+                                    style: TextStyle(
+                                      fontFamily: 'Vazir',
+                                      fontSize: 12,
+                                      color: Colors.grey.shade600,
+                                    ),
+                                  ),
+                                  Text(
+                                    'موجودی: ${product.stock}',
+                                    textDirection: TextDirection.rtl,
+                                    style: TextStyle(
+                                      fontFamily: 'Vazir',
+                                      fontSize: 12,
+                                      color: product.stock >= entry.value
+                                          ? Colors.green.shade600
+                                          : Colors.red.shade600,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              trailing: IconButton(
+                                icon: FaIcon(
+                                  FontAwesomeIcons.minusCircle,
+                                  color: Colors.red.shade600,
+                                  size: 20,
+                                ),
+                                onPressed: () {
+                                  debugPrint(
+                                      'Updating quantity for ${entry.key} to ${entry.value - 1}');
+                                  cartProvider.updateQuantity(
+                                      entry.key, entry.value - 1);
+                                },
+                              ),
+                            ),
                           ),
                         ),
                       ),
@@ -245,93 +304,374 @@ class _CartScreenState extends State<CartScreen> {
                 );
               },
             ),
-      bottomNavigationBar: BottomAppBar(
-        color: AppColors.primary,
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'جمع کل: ${cartProvider.getTotalAmount(productProvider.products).toStringAsFixed(0)} تومان',
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  fontFamily: 'Vazir',
-                  color: Colors.white,
+      bottomNavigationBar: cartProvider.items.isEmpty
+          ? null
+          : BottomAppBar(
+              color: Colors.white,
+              child: Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      AppColors.primary.withOpacity(0.1),
+                      AppColors.accent.withOpacity(0.1)
+                    ],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  border: Border(
+                      top: BorderSide(color: Colors.black87, width: 1.5)),
                 ),
-                textDirection: TextDirection.rtl,
-              ),
-              ElevatedButton.icon(
-                onPressed: cartProvider.items.isEmpty
-                    ? null
-                    : () async {
-                        setState(() {
-                          _isLoading = true;
-                        });
-                        try {
-                          debugPrint(
-                              'Checking inventory before creating order');
-                          final inventoryValid = await _checkInventory(
-                              cartProvider.items.entries.toList(),
-                              authProvider.token!);
-                          if (!inventoryValid) {
-                            return; // Error message set in _checkInventory
-                          }
-
-                          debugPrint('Creating order from cart');
-                          final total = cartProvider
-                              .getTotalAmount(productProvider.products);
-                          final orderItems = cartProvider.items.entries
-                              .map((e) => OrderItem(
-                                  productId: e.key, quantity: e.value))
-                              .toList();
-                          await orderProvider.createOrder(
-                              orderItems, total, authProvider.token!);
-                          cartProvider.clear();
-                          ScaffoldMessenger.of(context).hideCurrentSnackBar();
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text(
-                                'سفارش با موفقیت ثبت شد',
-                                textDirection: TextDirection.rtl,
-                                style: TextStyle(fontFamily: 'Vazir'),
-                              ),
-                              backgroundColor: AppColors.accent,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    FadeInUp(
+                      duration: const Duration(milliseconds: 600),
+                      child: Text(
+                        'جمع کل: ${cartProvider.getTotalAmount(productProvider.products).toStringAsFixed(0)} تومان',
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          fontFamily: 'Vazir',
+                          color: AppColors.primary,
+                        ),
+                        textDirection: TextDirection.rtl,
+                      ),
+                    ),
+                    Bounce(
+                      duration: const Duration(milliseconds: 600),
+                      child: Container(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [AppColors.accent, AppColors.primary],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: Colors.black87, width: 1),
+                          boxShadow: [
+                            BoxShadow(
+                              color: AppColors.accent.withOpacity(0.3),
+                              blurRadius: 8,
+                              spreadRadius: 2,
                             ),
-                          );
-                          Navigator.pushNamed(
-                              context, AppRoutes.orderManagement);
-                        } catch (e) {
-                          setState(() {
-                            _hasError = true;
-                            _errorMessage = e
-                                .toString()
-                                .replaceFirst('Exception: ', '')
-                                .replaceFirst(
-                                    RegExp(r'400 - {"msg":"[^"]+"}'), '');
-                          });
-                        } finally {
-                          setState(() {
-                            _isLoading = false;
-                          });
-                        }
-                      },
-                icon: const FaIcon(FontAwesomeIcons.checkCircle,
-                    color: Colors.white),
-                label: const Text(
-                  'ثبت سفارش',
-                  style: TextStyle(fontFamily: 'Vazir', color: Colors.white),
+                          ],
+                        ),
+                        child: ElevatedButton.icon(
+                          onPressed: () async {
+                            setState(() {
+                              _isLoading = true;
+                            });
+                            try {
+                              debugPrint(
+                                  'Checking inventory before creating order');
+                              final inventoryValid = await _checkInventory(
+                                  cartProvider.items.entries.toList(),
+                                  authProvider.token!);
+                              if (!inventoryValid) {
+                                return;
+                              }
+                              debugPrint('Creating order from cart');
+                              final total = cartProvider
+                                  .getTotalAmount(productProvider.products);
+                              final orderItems = cartProvider.items.entries
+                                  .map((e) => OrderItem(
+                                      productId: e.key, quantity: e.value))
+                                  .toList();
+                              await orderProvider.createOrder(
+                                  orderItems, total, authProvider.token!);
+                              cartProvider.clear();
+                              ScaffoldMessenger.of(context)
+                                  .hideCurrentSnackBar();
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: const Text(
+                                    'سفارش با موفقیت ثبت شد',
+                                    textDirection: TextDirection.rtl,
+                                    style: TextStyle(
+                                        fontFamily: 'Vazir',
+                                        fontSize: 12,
+                                        color: Colors.white),
+                                  ),
+                                  backgroundColor: AppColors.accent,
+                                  duration: const Duration(seconds: 2),
+                                  behavior: SnackBarBehavior.floating,
+                                  shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(10)),
+                                ),
+                              );
+                              Navigator.pushNamed(
+                                  context, AppRoutes.orderManagement);
+                            } catch (e) {
+                              String errorMessage = e
+                                  .toString()
+                                  .replaceFirst('Exception: ', '')
+                                  .replaceFirst(
+                                      RegExp(r'400 - {"msg":"[^"]+"}'), '');
+                              if (errorMessage.contains(
+                                  'Unauthorized: Invalid or expired token')) {
+                                _handleTokenExpiration();
+                                return;
+                              }
+                              setState(() {
+                                _hasError = true;
+                                _errorMessage = errorMessage;
+                              });
+                            } finally {
+                              setState(() {
+                                _isLoading = false;
+                              });
+                            }
+                          },
+                          icon: const FaIcon(FontAwesomeIcons.checkCircle,
+                              color: Colors.white, size: 18),
+                          label: const Text(
+                            'ثبت سفارش',
+                            style: TextStyle(
+                                fontFamily: 'Vazir',
+                                fontSize: 14,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white),
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.transparent,
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12)),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 16, vertical: 10),
+                            elevation: 0,
+                            shadowColor: Colors.transparent,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.accent,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+    );
+  }
+
+  PreferredSizeWidget _buildAppBar() {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    return AppBar(
+      title: FadeInDown(
+        duration: const Duration(milliseconds: 800),
+        child: const Text(
+          'سبد خرید',
+          style: TextStyle(
+              fontFamily: 'Vazir',
+              fontSize: 22,
+              fontWeight: FontWeight.bold,
+              color: Colors.white),
+        ),
+      ),
+      backgroundColor: AppColors.primary,
+      elevation: 0,
+      flexibleSpace: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [AppColors.primary, AppColors.accent.withOpacity(0.7)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+        ),
+      ),
+      actions: [
+        FadeInDown(
+          duration: const Duration(milliseconds: 800),
+          child: IconButton(
+            icon: const FaIcon(FontAwesomeIcons.rightFromBracket,
+                color: Colors.white, size: 20),
+            tooltip: 'خروج',
+            onPressed: () async {
+              await authProvider.logout();
+              Navigator.pushNamedAndRemoveUntil(
+                  context, AppRoutes.login, (route) => false);
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildCustomLoader() {
+    return FadeIn(
+      duration: const Duration(milliseconds: 1000),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          ZoomIn(
+            duration: const Duration(milliseconds: 800),
+            child: Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.primary.withOpacity(0.4),
+                    blurRadius: 20,
+                    spreadRadius: 6,
+                  ),
+                ],
+                border: Border.all(color: Colors.black87, width: 1.5),
+              ),
+              child: const CircularProgressIndicator(
+                valueColor: AlwaysStoppedAnimation<Color>(AppColors.accent),
+                strokeWidth: 8,
+              ),
+            ),
+          ),
+          const SizedBox(height: 20),
+          const Text(
+            'در حال بارگذاری سبد خرید...',
+            style: TextStyle(
+              fontFamily: 'Vazir',
+              fontSize: 18,
+              fontWeight: FontWeight.w600,
+              color: AppColors.primary,
+            ),
+            textDirection: TextDirection.rtl,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildErrorCard() {
+    return FadeInUp(
+      duration: const Duration(milliseconds: 800),
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 20),
+        padding: const EdgeInsets.all(24),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.2),
+              blurRadius: 12,
+              spreadRadius: 3,
+            ),
+          ],
+          border: Border.all(color: Colors.black87, width: 1.5),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ZoomIn(
+              duration: const Duration(milliseconds: 600),
+              child: const FaIcon(
+                FontAwesomeIcons.exclamationTriangle,
+                color: Colors.redAccent,
+                size: 48,
+              ),
+            ),
+            const SizedBox(height: 20),
+            Text(
+              'خطا: $_errorMessage',
+              textDirection: TextDirection.rtl,
+              style: const TextStyle(
+                fontSize: 18,
+                fontFamily: 'Vazir',
+                fontWeight: FontWeight.w600,
+                color: Colors.redAccent,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 20),
+            Bounce(
+              duration: const Duration(milliseconds: 800),
+              child: Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [AppColors.accent, AppColors.primary],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.black87, width: 1),
+                ),
+                child: ElevatedButton(
+                  onPressed: () {
+                    setState(() {
+                      _hasError = false;
+                      _errorMessage = '';
+                    });
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.transparent,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 32, vertical: 12),
+                    elevation: 6,
+                    shadowColor: AppColors.accent.withOpacity(0.4),
+                  ),
+                  child: const Text(
+                    'تلاش مجدد',
+                    style: TextStyle(
+                      fontFamily: 'Vazir',
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
               ),
-            ],
-          ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEmptyCartCard() {
+    return FadeInUp(
+      duration: const Duration(milliseconds: 800),
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 20),
+        padding: const EdgeInsets.all(24),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.2),
+              blurRadius: 12,
+              spreadRadius: 3,
+            ),
+          ],
+          border: Border.all(color: Colors.black87, width: 1.5),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ZoomIn(
+              duration: const Duration(milliseconds: 600),
+              child: const FaIcon(
+                FontAwesomeIcons.cartShopping,
+                color: AppColors.primary,
+                size: 48,
+              ),
+            ),
+            const SizedBox(height: 20),
+            const Text(
+              'سبد خرید شما خالی است',
+              textDirection: TextDirection.rtl,
+              style: TextStyle(
+                fontSize: 18,
+                fontFamily: 'Vazir',
+                fontWeight: FontWeight.w600,
+                color: AppColors.primary,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 20),
+          ],
         ),
       ),
     );

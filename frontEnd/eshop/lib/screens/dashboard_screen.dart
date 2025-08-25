@@ -1,8 +1,7 @@
-
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
-import 'package:curved_navigation_bar/curved_navigation_bar.dart';
+import 'package:animate_do/animate_do.dart';
 import '../providers/auth_provider.dart';
 import '../providers/order_provider.dart';
 import '../providers/product_provider.dart';
@@ -22,7 +21,8 @@ class DashboardScreen extends StatefulWidget {
   _DashboardScreenState createState() => _DashboardScreenState();
 }
 
-class _DashboardScreenState extends State<DashboardScreen> {
+class _DashboardScreenState extends State<DashboardScreen>
+    with SingleTickerProviderStateMixin {
   bool _isLoading = true;
   bool _hasError = false;
   String _errorMessage = '';
@@ -31,6 +31,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
   String _selectedHomeTab = 'edit_profile';
   bool _userDataError = false;
   String _userDataErrorMessage = '';
+  late AnimationController _animationController;
+  late Animation<double> _fadeAnimation;
 
   final _usernameController = TextEditingController();
   final _emailController = TextEditingController();
@@ -39,8 +41,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
   @override
   void initState() {
     super.initState();
+    _animationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 900),
+    );
+    _fadeAnimation = CurvedAnimation(
+      parent: _animationController,
+      curve: Curves.easeInOut,
+    );
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _fetchData();
+      _animationController.forward();
     });
   }
 
@@ -48,6 +59,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   void dispose() {
     _usernameController.dispose();
     _emailController.dispose();
+    _animationController.dispose();
     super.dispose();
   }
 
@@ -63,15 +75,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final orderProvider = Provider.of<OrderProvider>(context, listen: false);
 
     try {
-      // Define futures as List<Future<dynamic>> to explicitly type it
       final List<Future<dynamic>> futures = [];
-      // For non-admin roles, only fetch orders
       if (authProvider.token == null || authProvider.userId == null) {
         throw Exception('Token or User ID is null');
       }
-      futures.add(orderProvider.fetchOrders(
-          authProvider.token!, authProvider.role ?? 'user', authProvider.userId!));
-      // For user role, also fetch products
+      futures.add(orderProvider.fetchOrders(authProvider.token!,
+          authProvider.role ?? 'user', authProvider.userId!));
       if (authProvider.role == 'user') {
         futures.add(productProvider.fetchProducts());
       }
@@ -139,9 +148,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
       );
       authProvider.updateUserInfo(_usernameController.text);
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('اطلاعات با موفقیت به‌روزرسانی شد',
-              textDirection: TextDirection.rtl),
+        SnackBar(
+          content: const Text(
+            'اطلاعات با موفقیت به‌روزرسانی شد',
+            textDirection: TextDirection.rtl,
+            style: TextStyle(
+                fontFamily: 'Vazir', fontSize: 14, color: Colors.white),
+          ),
+          backgroundColor: Colors.green.shade600,
+          behavior: SnackBarBehavior.floating,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          margin: const EdgeInsets.all(12),
+          elevation: 6,
+          duration: const Duration(seconds: 3),
         ),
       );
     } catch (e) {
@@ -150,7 +170,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
           content: Text(
             'خطا در به‌روزرسانی اطلاعات: ${_formatErrorMessage(e.toString())}',
             textDirection: TextDirection.rtl,
+            style: const TextStyle(
+                fontFamily: 'Vazir', fontSize: 14, color: Colors.white),
           ),
+          backgroundColor: Colors.red.shade600,
+          behavior: SnackBarBehavior.floating,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          margin: const EdgeInsets.all(12),
+          elevation: 6,
+          duration: const Duration(seconds: 4),
         ),
       );
     }
@@ -161,14 +190,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final authProvider = Provider.of<AuthProvider>(context);
     final role = authProvider.role ?? 'user';
 
-    // Redirect to AdminDashboardScreen for admin, warehouse_manager, delivery_agent
     if (['admin', 'warehouse_manager', 'delivery_agent'].contains(role)) {
       return const AdminDashboardScreen();
     }
 
     if (_isLoading) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
+      return Scaffold(
+        body: Center(
+          child: ZoomIn(
+            duration: const Duration(milliseconds: 600),
+            child: _buildCustomLoader(),
+          ),
+        ),
       );
     }
 
@@ -176,16 +209,267 @@ class _DashboardScreenState extends State<DashboardScreen> {
       return Scaffold(
         appBar: _buildAppBar(authProvider),
         body: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text(
-                'خطا در بارگذاری اطلاعات: $_errorMessage',
-                textDirection: TextDirection.rtl,
-                style: const TextStyle(fontSize: 16, fontFamily: 'Vazir'),
+          child: FadeInUp(
+            duration: const Duration(milliseconds: 600),
+            child: _buildErrorCard(),
+          ),
+        ),
+      );
+    }
+
+    return Scaffold(
+      appBar: _buildAppBar(authProvider),
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [AppColors.primary.withOpacity(0.2), Colors.grey.shade100],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+          ),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(12.0),
+          child: FadeIn(
+            duration: const Duration(milliseconds: 400),
+            child: _buildTabContent(context, role),
+          ),
+        ),
+      ),
+      bottomNavigationBar: _buildCustomNavigationBar(),
+    );
+  }
+
+  AppBar _buildAppBar(AuthProvider authProvider) {
+    return AppBar(
+      title: SlideInDown(
+        duration: const Duration(milliseconds: 600),
+        child: const Text(
+          'فروشگاه',
+          style: TextStyle(
+            fontFamily: 'Vazir',
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+          ),
+        ),
+      ),
+      backgroundColor: AppColors.primary,
+      elevation: 0,
+      flexibleSpace: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [AppColors.primary, AppColors.accent.withOpacity(0.7)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          border: Border(bottom: BorderSide(color: Colors.black87, width: 1.5)),
+        ),
+      ),
+      actions: [
+        FadeInRight(
+          duration: const Duration(milliseconds: 600),
+          child: IconButton(
+            icon: const FaIcon(FontAwesomeIcons.rightFromBracket,
+                size: 22, color: Colors.white),
+            tooltip: 'خروج',
+            onPressed: () async {
+              await authProvider.logout();
+              Navigator.pushNamedAndRemoveUntil(
+                  context, AppRoutes.login, (route) => false);
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildCustomNavigationBar() {
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            AppColors.primary.withOpacity(0.9),
+            AppColors.accent.withOpacity(0.9)
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        border: Border(top: BorderSide(color: Colors.black87, width: 1.5)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.2),
+            blurRadius: 10,
+            offset: const Offset(0, -3),
+          ),
+        ],
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      child: BottomNavigationBar(
+        currentIndex:
+            ['home', 'products', 'orders', 'cart'].indexOf(_selectedTab),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        selectedItemColor: Colors.white,
+        unselectedItemColor: Colors.grey.shade300,
+        selectedLabelStyle: const TextStyle(
+          fontFamily: 'Vazir',
+          fontSize: 12,
+          fontWeight: FontWeight.bold,
+        ),
+        unselectedLabelStyle: const TextStyle(
+          fontFamily: 'Vazir',
+          fontSize: 10,
+        ),
+        type: BottomNavigationBarType.fixed,
+        items: [
+          _buildNavItem(FontAwesomeIcons.house, 'خانه', 'home'),
+          _buildNavItem(FontAwesomeIcons.store, 'محصولات', 'products'),
+          _buildNavItem(FontAwesomeIcons.boxOpen, 'سفارشات', 'orders'),
+          _buildNavItem(FontAwesomeIcons.cartShopping, 'سبد خرید', 'cart'),
+        ],
+        onTap: (index) {
+          setState(() {
+            _selectedTab = ['home', 'products', 'orders', 'cart'][index];
+            _animationController.reset();
+            _animationController.forward();
+          });
+        },
+      ),
+    );
+  }
+
+  BottomNavigationBarItem _buildNavItem(
+      IconData icon, String label, String tab) {
+    return BottomNavigationBarItem(
+      icon: AnimatedContainer(
+        duration: const Duration(milliseconds: 300),
+        padding: const EdgeInsets.all(6),
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: _selectedTab == tab
+              ? AppColors.accent.withOpacity(0.2)
+              : Colors.transparent,
+          border: _selectedTab == tab
+              ? Border.all(color: Colors.black87, width: 1)
+              : null,
+          boxShadow: _selectedTab == tab
+              ? [
+                  BoxShadow(
+                    color: AppColors.accent.withOpacity(0.3),
+                    blurRadius: 8,
+                    spreadRadius: 2,
+                  ),
+                ]
+              : [],
+        ),
+        child: FaIcon(
+          icon,
+          size: _selectedTab == tab ? 26 : 20,
+          color: _selectedTab == tab ? Colors.white : Colors.grey.shade300,
+        ),
+      ),
+      label: label,
+    );
+  }
+
+  Widget _buildCustomLoader() {
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            shape: BoxShape.circle,
+            border: Border.all(color: Colors.black87, width: 1.5),
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.primary.withOpacity(0.3),
+                blurRadius: 12,
+                spreadRadius: 3,
               ),
-              const SizedBox(height: 16),
-              ElevatedButton(
+            ],
+          ),
+          child: const CircularProgressIndicator(
+            valueColor: AlwaysStoppedAnimation<Color>(AppColors.accent),
+            strokeWidth: 5,
+          ),
+        ),
+        const SizedBox(height: 12),
+        const Text(
+          'در حال بارگذاری...',
+          style: TextStyle(
+            fontFamily: 'Vazir',
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+            color: AppColors.primary,
+          ),
+          textDirection: TextDirection.rtl,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildErrorCard() {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.black87, width: 1.5),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.2),
+            blurRadius: 12,
+            spreadRadius: 3,
+          ),
+        ],
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          ZoomIn(
+            duration: const Duration(milliseconds: 600),
+            child: const FaIcon(
+              FontAwesomeIcons.exclamationTriangle,
+              color: Colors.redAccent,
+              size: 36,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            'خطا در بارگذاری اطلاعات: $_errorMessage',
+            textDirection: TextDirection.rtl,
+            style: const TextStyle(
+              fontSize: 16,
+              fontFamily: 'Vazir',
+              fontWeight: FontWeight.w600,
+              color: Colors.redAccent,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 12),
+          Bounce(
+            duration: const Duration(milliseconds: 600),
+            child: Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [AppColors.accent, AppColors.primary],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.black87, width: 1),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.accent.withOpacity(0.3),
+                    blurRadius: 8,
+                    spreadRadius: 2,
+                  ),
+                ],
+              ),
+              child: ElevatedButton(
                 onPressed: () {
                   setState(() {
                     _isLoading = true;
@@ -194,105 +478,67 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   });
                   _fetchData();
                 },
-                child: const Text('تلاش مجدد',
-                    style: TextStyle(fontFamily: 'Vazir')),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.accent,
+                  backgroundColor: Colors.transparent,
+                  foregroundColor: Colors.white,
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12)),
                   padding:
-                      const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                      const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                  elevation: 0,
+                ),
+                child: const Text(
+                  'تلاش مجدد',
+                  style: TextStyle(
+                    fontFamily: 'Vazir',
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
-            ],
-          ),
-        ),
-      );
-    }
-
-    return Scaffold(
-      appBar: _buildAppBar(authProvider),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: AnimatedSwitcher(
-          duration: const Duration(milliseconds: 400),
-          transitionBuilder: (child, animation) =>
-              FadeTransition(opacity: animation, child: child),
-          child: _buildTabContent(context, role),
-        ),
-      ),
-      bottomNavigationBar: CurvedNavigationBar(
-        backgroundColor: Colors.transparent,
-        buttonBackgroundColor: AppColors.accent,
-        color: AppColors.primary,
-        animationDuration: const Duration(milliseconds: 400),
-        items: [
-          AnimatedScale(
-            scale: _selectedTab == 'home' ? 1.2 : 1.0,
-            duration: const Duration(milliseconds: 300),
-            child: const FaIcon(FontAwesomeIcons.home,
-                color: Colors.white, size: 28),
-          ),
-          AnimatedScale(
-            scale: _selectedTab == 'products' ? 1.2 : 1.0,
-            duration: const Duration(milliseconds: 300),
-            child: const FaIcon(FontAwesomeIcons.store,
-                color: Colors.white, size: 28),
-          ),
-          AnimatedScale(
-            scale: _selectedTab == 'orders' ? 1.2 : 1.0,
-            duration: const Duration(milliseconds: 300),
-            child: const FaIcon(FontAwesomeIcons.boxOpen,
-                color: Colors.white, size: 28),
-          ),
-          AnimatedScale(
-            scale: _selectedTab == 'cart' ? 1.2 : 1.0,
-            duration: const Duration(milliseconds: 300),
-            child: const FaIcon(FontAwesomeIcons.shoppingCart,
-                color: Colors.white, size: 28),
+            ),
           ),
         ],
-        onTap: (index) {
-          setState(() {
-            if (index == 0) {
-              _selectedTab = 'home';
-            } else if (index == 1) {
-              _selectedTab = 'products';
-            } else if (index == 2) {
-              _selectedTab = 'orders';
-            } else {
-              _selectedTab = 'cart';
-            }
-          });
-        },
       ),
-    );
-  }
-
-  AppBar _buildAppBar(AuthProvider authProvider) {
-    return AppBar(
-      title: const Text('فروشگاه',
-          style: TextStyle(fontFamily: 'Vazir', fontSize: 20)),
-      backgroundColor: AppColors.primary,
-      elevation: 4,
-      actions: [
-        IconButton(
-          icon: const FaIcon(FontAwesomeIcons.signOutAlt, size: 24),
-          tooltip: 'خروج',
-          onPressed: () async {
-            await authProvider.logout();
-            Navigator.pushNamedAndRemoveUntil(
-                context, AppRoutes.login, (route) => false);
-          },
-        ),
-      ],
     );
   }
 
   Widget _buildTabContent(BuildContext context, String role) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.black87, width: 1.5),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.2),
+            blurRadius: 12,
+            spreadRadius: 3,
+          ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(20),
+        child: AnimatedSwitcher(
+          duration: const Duration(milliseconds: 300),
+          transitionBuilder: (child, animation) => SlideTransition(
+            position: Tween<Offset>(
+              begin: const Offset(0, 0.1),
+              end: Offset.zero,
+            ).animate(animation),
+            child: FadeTransition(opacity: animation, child: child),
+          ),
+          child: _getTabWidget(role),
+        ),
+      ),
+    );
+  }
+
+  Widget _getTabWidget(String role) {
     switch (_selectedTab) {
       case 'home':
         return HomeTab(
+          key: const ValueKey('home'),
           role: role,
           selectedHomeTab: _selectedHomeTab,
           userDataError: _userDataError,
@@ -312,20 +558,26 @@ class _DashboardScreenState extends State<DashboardScreen> {
           onTabChanged: (tab) {
             setState(() {
               _selectedHomeTab = tab;
+              _animationController.reset();
+              _animationController.forward();
             });
           },
         );
       case 'products':
-        return const ProductsTab();
+        return const ProductsTab(key: ValueKey('products'));
       case 'orders':
-        return const OrdersTab();
+        return const OrdersTab(key: ValueKey('orders'));
       case 'cart':
-        return const CartScreen();
+        return const CartScreen(key: ValueKey('cart'));
       default:
-        return const Center(
+        return Center(
           child: Text(
             'تب نامعتبر',
-            style: TextStyle(fontSize: 16, fontFamily: 'Vazir'),
+            style: const TextStyle(
+              fontSize: 16,
+              fontFamily: 'Vazir',
+              color: AppColors.primary,
+            ),
             textDirection: TextDirection.rtl,
           ),
         );

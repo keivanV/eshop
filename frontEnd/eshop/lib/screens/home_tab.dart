@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:fl_chart/fl_chart.dart';
+import 'package:animate_do/animate_do.dart';
 import '../models/order.dart';
 import '../providers/auth_provider.dart';
 import '../providers/order_provider.dart';
@@ -38,31 +39,43 @@ class HomeTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SingleChildScrollView(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'مدیریت حساب',
-            style: TextStyle(
-              fontFamily: 'Vazir',
-              fontSize: 26,
-              fontWeight: FontWeight.bold,
-              color: Colors.black87,
+      child: Padding(
+        padding: const EdgeInsets.all(20.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            FadeInDown(
+              duration: const Duration(milliseconds: 800),
+              child: const Text(
+                'مدیریت حساب',
+                style: TextStyle(
+                  fontFamily: 'Vazir',
+                  fontSize: 28,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.primary,
+                ),
+                textDirection: TextDirection.rtl,
+              ),
             ),
-            textDirection: TextDirection.rtl,
-          ),
-          const SizedBox(height: 20),
-          _buildHomeMenuSection(context),
-          const SizedBox(height: 20),
-          AnimatedSwitcher(
-            duration: const Duration(milliseconds: 300),
-            transitionBuilder: (child, animation) => FadeTransition(
-              opacity: animation,
-              child: child,
+            const SizedBox(height: 24),
+            _buildHomeMenuSection(context),
+            const SizedBox(height: 24),
+            AnimatedSwitcher(
+              duration: const Duration(milliseconds: 400),
+              transitionBuilder: (child, animation) => FadeTransition(
+                opacity: animation,
+                child: SlideTransition(
+                  position: Tween<Offset>(
+                    begin: const Offset(0, 0.2),
+                    end: Offset.zero,
+                  ).animate(animation),
+                  child: child,
+                ),
+              ),
+              child: _buildHomeTabContent(context),
             ),
-            child: _buildHomeTabContent(context),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -105,99 +118,191 @@ class HomeTab extends StatelessWidget {
 
     switch (selectedHomeTab) {
       case 'edit_profile':
-        return Column(
-          children: [
-            if (userDataError)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 16),
-                child: Text(
-                  'خطا در بارگذاری اطلاعات کاربر: $userDataErrorMessage',
-                  style: TextStyle(
-                    fontFamily: 'Vazir',
-                    fontSize: 14,
-                    color: Colors.red.shade700,
+        return FadeInUp(
+          duration: const Duration(milliseconds: 800),
+          child: Column(
+            children: [
+              if (userDataError)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 20),
+                  child: ZoomIn(
+                    duration: const Duration(milliseconds: 600),
+                    child: Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.red.shade50,
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.red.withOpacity(0.2),
+                            blurRadius: 8,
+                            spreadRadius: 2,
+                          ),
+                        ],
+                      ),
+                      child: Text(
+                        'خطا در بارگذاری اطلاعات کاربر: $userDataErrorMessage',
+                        style: const TextStyle(
+                          fontFamily: 'Vazir',
+                          fontSize: 16,
+                          color: Colors.redAccent,
+                          fontWeight: FontWeight.w500,
+                        ),
+                        textDirection: TextDirection.rtl,
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
                   ),
-                  textDirection: TextDirection.rtl,
                 ),
-              ),
-            Form(
-              key: formKey,
-              child: Column(
-                children: [
-                  TextFormField(
-                    controller: usernameController,
-                    decoration: InputDecoration(
-                      labelText: 'نام کاربری',
-                      labelStyle: const TextStyle(fontFamily: 'Vazir'),
-                      border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12)),
-                      prefixIcon: const FaIcon(FontAwesomeIcons.user),
+              Form(
+                key: formKey,
+                child: Column(
+                  children: [
+                    TextFormField(
+                      controller: usernameController,
+                      decoration: InputDecoration(
+                        labelText: 'نام کاربری',
+                        labelStyle: const TextStyle(
+                          fontFamily: 'Vazir',
+                          fontSize: 16,
+                          color: AppColors.primary,
+                        ),
+                        filled: true,
+                        fillColor: Colors.white,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(16),
+                          borderSide: BorderSide.none,
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(16),
+                          borderSide: BorderSide(
+                              color: AppColors.primary.withOpacity(0.2)),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(16),
+                          borderSide: const BorderSide(
+                              color: AppColors.accent, width: 2),
+                        ),
+                        prefixIcon: const FaIcon(FontAwesomeIcons.user,
+                            color: AppColors.primary),
+                        contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 14),
+                      ),
+                      textDirection: TextDirection.rtl,
+                      style: const TextStyle(fontFamily: 'Vazir', fontSize: 16),
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'لطفاً نام کاربری را وارد کنید';
+                        }
+                        return null;
+                      },
                     ),
-                    textDirection: TextDirection.rtl,
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'لطفاً نام کاربری را وارد کنید';
-                      }
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: 16),
-                  TextFormField(
-                    controller: emailController,
-                    decoration: InputDecoration(
-                      labelText: 'ایمیل',
-                      labelStyle: const TextStyle(fontFamily: 'Vazir'),
-                      border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12)),
-                      prefixIcon: const FaIcon(FontAwesomeIcons.envelope),
+                    const SizedBox(height: 20),
+                    TextFormField(
+                      controller: emailController,
+                      decoration: InputDecoration(
+                        labelText: 'ایمیل',
+                        labelStyle: const TextStyle(
+                          fontFamily: 'Vazir',
+                          fontSize: 16,
+                          color: AppColors.primary,
+                        ),
+                        filled: true,
+                        fillColor: Colors.white,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(16),
+                          borderSide: BorderSide.none,
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(16),
+                          borderSide: BorderSide(
+                              color: AppColors.primary.withOpacity(0.2)),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(16),
+                          borderSide: const BorderSide(
+                              color: AppColors.accent, width: 2),
+                        ),
+                        prefixIcon: const FaIcon(FontAwesomeIcons.envelope,
+                            color: AppColors.primary),
+                        contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 14),
+                      ),
+                      textDirection: TextDirection.rtl,
+                      style: const TextStyle(fontFamily: 'Vazir', fontSize: 16),
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'لطفاً ایمیل را وارد کنید';
+                        }
+                        if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$')
+                            .hasMatch(value)) {
+                          return 'ایمیل نامعتبر است';
+                        }
+                        return null;
+                      },
                     ),
-                    textDirection: TextDirection.rtl,
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'لطفاً ایمیل را وارد کنید';
-                      }
-                      if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$')
-                          .hasMatch(value)) {
-                        return 'ایمیل نامعتبر است';
-                      }
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: 20),
-                  ElevatedButton(
-                    onPressed: () => onUpdateProfile(authProvider),
-                    child: const Text('ذخیره تغییرات',
-                        style: TextStyle(fontFamily: 'Vazir')),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.accent,
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12)),
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 20, vertical: 12),
-                    ),
-                  ),
-                  if (userDataError)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 16),
+                    const SizedBox(height: 24),
+                    Bounce(
+                      duration: const Duration(milliseconds: 800),
                       child: ElevatedButton(
-                        onPressed: () async {
-                          await onFetchUserData(authProvider);
-                        },
-                        child: const Text('تلاش مجدد برای بارگذاری اطلاعات',
-                            style: TextStyle(fontFamily: 'Vazir')),
+                        onPressed: () => onUpdateProfile(authProvider),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.blueGrey,
+                          backgroundColor: AppColors.accent,
+                          foregroundColor: Colors.white,
                           shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12)),
+                            borderRadius: BorderRadius.circular(16),
+                          ),
                           padding: const EdgeInsets.symmetric(
-                              horizontal: 20, vertical: 12),
+                              horizontal: 32, vertical: 16),
+                          elevation: 6,
+                          shadowColor: AppColors.accent.withOpacity(0.4),
+                        ),
+                        child: const Text(
+                          'ذخیره تغییرات',
+                          style: TextStyle(
+                            fontFamily: 'Vazir',
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ),
                     ),
-                ],
+                    if (userDataError)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 20),
+                        child: Bounce(
+                          duration: const Duration(milliseconds: 800),
+                          child: ElevatedButton(
+                            onPressed: () async {
+                              await onFetchUserData(authProvider);
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.blueGrey.shade600,
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 32, vertical: 16),
+                              elevation: 6,
+                              shadowColor: Colors.blueGrey.withOpacity(0.4),
+                            ),
+                            child: const Text(
+                              'تلاش مجدد برای بارگذاری اطلاعات',
+                              style: TextStyle(
+                                fontFamily: 'Vazir',
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         );
       case 'order_progress':
         final currentOrders = orderProvider.orders
@@ -212,28 +317,58 @@ class HomeTab extends StatelessWidget {
             'Current orders statuses: ${currentOrders.map((o) => o.status.toString()).toList()}');
         if (currentOrders.isEmpty) {
           return Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Text(
-                  'هیچ سفارش جاری یافت نشد',
-                  textDirection: TextDirection.rtl,
-                  style: TextStyle(fontSize: 16, fontFamily: 'Vazir'),
-                ),
-                const SizedBox(height: 16),
-                ElevatedButton(
-                  onPressed: onRefreshData,
-                  child: const Text('تلاش مجدد',
-                      style: TextStyle(fontFamily: 'Vazir')),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.accent,
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12)),
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 20, vertical: 12),
+            child: FadeInUp(
+              duration: const Duration(milliseconds: 800),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  ZoomIn(
+                    duration: const Duration(milliseconds: 600),
+                    child: const FaIcon(
+                      FontAwesomeIcons.boxOpen,
+                      size: 48,
+                      color: AppColors.primary,
+                    ),
                   ),
-                ),
-              ],
+                  const SizedBox(height: 20),
+                  const Text(
+                    'هیچ سفارش جاری یافت نشد',
+                    textDirection: TextDirection.rtl,
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontFamily: 'Vazir',
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.primary,
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  Bounce(
+                    duration: const Duration(milliseconds: 800),
+                    child: ElevatedButton(
+                      onPressed: onRefreshData,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.accent,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 32, vertical: 16),
+                        elevation: 6,
+                        shadowColor: AppColors.accent.withOpacity(0.4),
+                      ),
+                      child: const Text(
+                        'تلاش مجدد',
+                        style: TextStyle(
+                          fontFamily: 'Vazir',
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
           );
         }
@@ -243,7 +378,11 @@ class HomeTab extends StatelessWidget {
           itemCount: currentOrders.length,
           itemBuilder: (ctx, i) {
             debugPrint('Building timeline for order: ${currentOrders[i].id}');
-            return _buildOrderTimeline(currentOrders[i]);
+            return FadeInUp(
+              duration: const Duration(milliseconds: 600),
+              delay: Duration(milliseconds: 200 * i),
+              child: _buildOrderTimeline(currentOrders[i]),
+            );
           },
         );
       case 'order_report':
@@ -270,25 +409,24 @@ class HomeTab extends StatelessWidget {
         debugPrint('Order stats: $orderStats');
         final sections = [
           PieChartSectionData(
-            color: Colors.blue,
+            color: Colors.blue.shade600,
             value: orderStats['pending']!.toDouble(),
             title: '',
-            radius: 100,
+            radius: 120,
             badgeWidget: orderStats['pending']! > 0
-                ? AnimatedScale(
-                    scale: 1.0,
-                    duration: const Duration(milliseconds: 500),
+                ? ZoomIn(
+                    duration: const Duration(milliseconds: 600),
                     child: Container(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 4),
+                          horizontal: 12, vertical: 6),
                       decoration: BoxDecoration(
-                        color: Colors.blue.withOpacity(0.9),
-                        borderRadius: BorderRadius.circular(12),
+                        color: Colors.blue.shade600.withOpacity(0.9),
+                        borderRadius: BorderRadius.circular(16),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.2),
-                            blurRadius: 4,
-                            offset: const Offset(0, 2),
+                            color: Colors.black.withOpacity(0.3),
+                            blurRadius: 6,
+                            offset: const Offset(0, 3),
                           ),
                         ],
                       ),
@@ -296,7 +434,7 @@ class HomeTab extends StatelessWidget {
                         '${orderStats['pending']}',
                         style: const TextStyle(
                           fontFamily: 'Vazir',
-                          fontSize: 12,
+                          fontSize: 14,
                           color: Colors.white,
                           fontWeight: FontWeight.bold,
                         ),
@@ -304,28 +442,27 @@ class HomeTab extends StatelessWidget {
                     ),
                   )
                 : null,
-            badgePositionPercentageOffset: 1.2,
+            badgePositionPercentageOffset: 1.3,
           ),
           PieChartSectionData(
-            color: Colors.green,
+            color: Colors.green.shade600,
             value: orderStats['processed']!.toDouble(),
             title: '',
-            radius: 100,
+            radius: 120,
             badgeWidget: orderStats['processed']! > 0
-                ? AnimatedScale(
-                    scale: 1.0,
-                    duration: const Duration(milliseconds: 500),
+                ? ZoomIn(
+                    duration: const Duration(milliseconds: 600),
                     child: Container(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 4),
+                          horizontal: 12, vertical: 6),
                       decoration: BoxDecoration(
-                        color: Colors.green.withOpacity(0.9),
-                        borderRadius: BorderRadius.circular(12),
+                        color: Colors.green.shade600.withOpacity(0.9),
+                        borderRadius: BorderRadius.circular(16),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.2),
-                            blurRadius: 4,
-                            offset: const Offset(0, 2),
+                            color: Colors.black.withOpacity(0.3),
+                            blurRadius: 6,
+                            offset: const Offset(0, 3),
                           ),
                         ],
                       ),
@@ -333,7 +470,7 @@ class HomeTab extends StatelessWidget {
                         '${orderStats['processed']}',
                         style: const TextStyle(
                           fontFamily: 'Vazir',
-                          fontSize: 12,
+                          fontSize: 14,
                           color: Colors.white,
                           fontWeight: FontWeight.bold,
                         ),
@@ -341,28 +478,27 @@ class HomeTab extends StatelessWidget {
                     ),
                   )
                 : null,
-            badgePositionPercentageOffset: 1.2,
+            badgePositionPercentageOffset: 1.3,
           ),
           PieChartSectionData(
-            color: Colors.orange,
+            color: Colors.orange.shade600,
             value: orderStats['shipped']!.toDouble(),
             title: '',
-            radius: 100,
+            radius: 120,
             badgeWidget: orderStats['shipped']! > 0
-                ? AnimatedScale(
-                    scale: 1.0,
-                    duration: const Duration(milliseconds: 500),
+                ? ZoomIn(
+                    duration: const Duration(milliseconds: 600),
                     child: Container(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 4),
+                          horizontal: 12, vertical: 6),
                       decoration: BoxDecoration(
-                        color: Colors.orange.withOpacity(0.9),
-                        borderRadius: BorderRadius.circular(12),
+                        color: Colors.orange.shade600.withOpacity(0.9),
+                        borderRadius: BorderRadius.circular(16),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.2),
-                            blurRadius: 4,
-                            offset: const Offset(0, 2),
+                            color: Colors.black.withOpacity(0.3),
+                            blurRadius: 6,
+                            offset: const Offset(0, 3),
                           ),
                         ],
                       ),
@@ -370,7 +506,7 @@ class HomeTab extends StatelessWidget {
                         '${orderStats['shipped']}',
                         style: const TextStyle(
                           fontFamily: 'Vazir',
-                          fontSize: 12,
+                          fontSize: 14,
                           color: Colors.white,
                           fontWeight: FontWeight.bold,
                         ),
@@ -378,28 +514,27 @@ class HomeTab extends StatelessWidget {
                     ),
                   )
                 : null,
-            badgePositionPercentageOffset: 1.2,
+            badgePositionPercentageOffset: 1.3,
           ),
           PieChartSectionData(
-            color: Colors.teal,
+            color: Colors.teal.shade600,
             value: orderStats['delivered']!.toDouble(),
             title: '',
-            radius: 100,
+            radius: 120,
             badgeWidget: orderStats['delivered']! > 0
-                ? AnimatedScale(
-                    scale: 1.0,
-                    duration: const Duration(milliseconds: 500),
+                ? ZoomIn(
+                    duration: const Duration(milliseconds: 600),
                     child: Container(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 4),
+                          horizontal: 12, vertical: 6),
                       decoration: BoxDecoration(
-                        color: Colors.teal.withOpacity(0.9),
-                        borderRadius: BorderRadius.circular(12),
+                        color: Colors.teal.shade600.withOpacity(0.9),
+                        borderRadius: BorderRadius.circular(16),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.2),
-                            blurRadius: 4,
-                            offset: const Offset(0, 2),
+                            color: Colors.black.withOpacity(0.3),
+                            blurRadius: 6,
+                            offset: const Offset(0, 3),
                           ),
                         ],
                       ),
@@ -407,7 +542,7 @@ class HomeTab extends StatelessWidget {
                         '${orderStats['delivered']}',
                         style: const TextStyle(
                           fontFamily: 'Vazir',
-                          fontSize: 12,
+                          fontSize: 14,
                           color: Colors.white,
                           fontWeight: FontWeight.bold,
                         ),
@@ -415,28 +550,27 @@ class HomeTab extends StatelessWidget {
                     ),
                   )
                 : null,
-            badgePositionPercentageOffset: 1.2,
+            badgePositionPercentageOffset: 1.3,
           ),
           PieChartSectionData(
-            color: Colors.red,
+            color: Colors.red.shade600,
             value: orderStats['returned']!.toDouble(),
             title: '',
-            radius: 100,
+            radius: 120,
             badgeWidget: orderStats['returned']! > 0
-                ? AnimatedScale(
-                    scale: 1.0,
-                    duration: const Duration(milliseconds: 500),
+                ? ZoomIn(
+                    duration: const Duration(milliseconds: 600),
                     child: Container(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 4),
+                          horizontal: 12, vertical: 6),
                       decoration: BoxDecoration(
-                        color: Colors.red.withOpacity(0.9),
-                        borderRadius: BorderRadius.circular(12),
+                        color: Colors.red.shade600.withOpacity(0.9),
+                        borderRadius: BorderRadius.circular(16),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.2),
-                            blurRadius: 4,
-                            offset: const Offset(0, 2),
+                            color: Colors.black.withOpacity(0.3),
+                            blurRadius: 6,
+                            offset: const Offset(0, 3),
                           ),
                         ],
                       ),
@@ -444,7 +578,7 @@ class HomeTab extends StatelessWidget {
                         '${orderStats['returned']}',
                         style: const TextStyle(
                           fontFamily: 'Vazir',
-                          fontSize: 12,
+                          fontSize: 14,
                           color: Colors.white,
                           fontWeight: FontWeight.bold,
                         ),
@@ -452,28 +586,27 @@ class HomeTab extends StatelessWidget {
                     ),
                   )
                 : null,
-            badgePositionPercentageOffset: 1.2,
+            badgePositionPercentageOffset: 1.3,
           ),
           PieChartSectionData(
-            color: Colors.grey,
+            color: Colors.grey.shade600,
             value: orderStats['cancelled']!.toDouble(),
             title: '',
-            radius: 100,
+            radius: 120,
             badgeWidget: orderStats['cancelled']! > 0
-                ? AnimatedScale(
-                    scale: 1.0,
-                    duration: const Duration(milliseconds: 500),
+                ? ZoomIn(
+                    duration: const Duration(milliseconds: 600),
                     child: Container(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 4),
+                          horizontal: 12, vertical: 6),
                       decoration: BoxDecoration(
-                        color: Colors.grey.withOpacity(0.9),
-                        borderRadius: BorderRadius.circular(12),
+                        color: Colors.grey.shade600.withOpacity(0.9),
+                        borderRadius: BorderRadius.circular(16),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.2),
-                            blurRadius: 4,
-                            offset: const Offset(0, 2),
+                            color: Colors.black.withOpacity(0.3),
+                            blurRadius: 6,
+                            offset: const Offset(0, 3),
                           ),
                         ],
                       ),
@@ -481,7 +614,7 @@ class HomeTab extends StatelessWidget {
                         '${orderStats['cancelled']}',
                         style: const TextStyle(
                           fontFamily: 'Vazir',
-                          fontSize: 12,
+                          fontSize: 14,
                           color: Colors.white,
                           fontWeight: FontWeight.bold,
                         ),
@@ -489,157 +622,241 @@ class HomeTab extends StatelessWidget {
                     ),
                   )
                 : null,
-            badgePositionPercentageOffset: 1.2,
+            badgePositionPercentageOffset: 1.3,
           ),
         ].where((section) => section.value > 0).toList();
         if (sections.isEmpty) {
           return Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Text(
-                  'هیچ داده‌ای برای نمایش گزارش سفارشات یافت نشد',
-                  textDirection: TextDirection.rtl,
-                  style: TextStyle(fontSize: 16, fontFamily: 'Vazir'),
-                ),
-                const SizedBox(height: 16),
-                ElevatedButton(
-                  onPressed: onRefreshData,
-                  child: const Text('تلاش مجدد',
-                      style: TextStyle(fontFamily: 'Vazir')),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.accent,
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12)),
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 20, vertical: 12),
+            child: FadeInUp(
+              duration: const Duration(milliseconds: 800),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  ZoomIn(
+                    duration: const Duration(milliseconds: 600),
+                    child: const FaIcon(
+                      FontAwesomeIcons.chartPie,
+                      size: 48,
+                      color: AppColors.primary,
+                    ),
                   ),
-                ),
-              ],
+                  const SizedBox(height: 20),
+                  const Text(
+                    'هیچ داده‌ای برای نمایش گزارش سفارشات یافت نشد',
+                    textDirection: TextDirection.rtl,
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontFamily: 'Vazir',
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.primary,
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  Bounce(
+                    duration: const Duration(milliseconds: 800),
+                    child: ElevatedButton(
+                      onPressed: onRefreshData,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.accent,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 32, vertical: 16),
+                        elevation: 6,
+                        shadowColor: AppColors.accent.withOpacity(0.4),
+                      ),
+                      child: const Text(
+                        'تلاش مجدد',
+                        style: TextStyle(
+                          fontFamily: 'Vazir',
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
           );
         }
-        return Column(
-          children: [
-            SizedBox(
-              height: 300,
-              child: PieChart(
-                PieChartData(
-                  sections: sections,
-                  centerSpaceRadius: 40,
-                  sectionsSpace: 2,
-                  pieTouchData: PieTouchData(enabled: false),
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-            Card(
-              elevation: 4,
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12)),
-              child: Padding(
-                padding: const EdgeInsets.all(12.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'خلاصه آمار سفارشات',
-                      style: TextStyle(
-                        fontFamily: 'Vazir',
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.black87,
-                      ),
-                      textDirection: TextDirection.rtl,
+        return FadeInUp(
+          duration: const Duration(milliseconds: 800),
+          child: Column(
+            children: [
+              Container(
+                height: 320,
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.15),
+                      blurRadius: 12,
+                      spreadRadius: 4,
                     ),
-                    const SizedBox(height: 8),
-                    ...[
-                      {
-                        'label': 'در انتظار',
-                        'count': orderStats['pending']!,
-                        'color': Colors.blue
-                      },
-                      {
-                        'label': 'پردازش‌شده',
-                        'count': orderStats['processed']!,
-                        'color': Colors.green
-                      },
-                      {
-                        'label': 'خروج از انبار',
-                        'count': orderStats['shipped']!,
-                        'color': Colors.orange
-                      },
-                      {
-                        'label': 'تحویل‌شده',
-                        'count': orderStats['delivered']!,
-                        'color': Colors.teal
-                      },
-                      {
-                        'label': 'مرجوع‌شده',
-                        'count': orderStats['returned']!,
-                        'color': Colors.red
-                      },
-                      {
-                        'label': 'لغوشده',
-                        'count': orderStats['cancelled']!,
-                        'color': Colors.grey
-                      },
-                    ].map((stat) => AnimatedOpacity(
-                          opacity: (stat['count'] as int) > 0 ? 1.0 : 0.5,
-                          duration: const Duration(milliseconds: 500),
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 4.0),
-                            child: Row(
-                              children: [
-                                Container(
-                                  width: 12,
-                                  height: 12,
-                                  decoration: BoxDecoration(
-                                    shape: BoxShape.circle,
-                                    color: stat['color'] as Color,
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: Text(
-                                    '${stat['label']}: ${stat['count']} سفارش',
-                                    style: const TextStyle(
-                                      fontFamily: 'Vazir',
-                                      fontSize: 14,
-                                      color: Colors.black87,
-                                    ),
-                                    textDirection: TextDirection.rtl,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        )),
                   ],
                 ),
+                child: PieChart(
+                  PieChartData(
+                    sections: sections,
+                    centerSpaceRadius: 50,
+                    sectionsSpace: 4,
+                    pieTouchData: PieTouchData(
+                      enabled: true,
+                      touchCallback: (FlTouchEvent event, pieTouchResponse) {
+                        if (event is FlTapUpEvent && pieTouchResponse != null) {
+                          // Optional: Add interaction feedback
+                        }
+                      },
+                    ),
+                  ),
+                ),
               ),
-            ),
-            const SizedBox(height: 16),
-            Wrap(
-              spacing: 12,
-              runSpacing: 8,
-              children: [
-                _buildLegendItem('در انتظار', Colors.blue),
-                _buildLegendItem('پردازش‌شده', Colors.green),
-                _buildLegendItem('خروج از انبار', Colors.orange),
-                _buildLegendItem('تحویل‌شده', Colors.teal),
-                _buildLegendItem('مرجوع‌شده', Colors.red),
-                _buildLegendItem('لغوشده', Colors.grey),
-              ],
-            ),
-          ],
+              const SizedBox(height: 20),
+              Card(
+                elevation: 6,
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(20)),
+                child: Container(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(20),
+                    gradient: LinearGradient(
+                      colors: [
+                        Colors.white,
+                        AppColors.primary.withOpacity(0.1)
+                      ],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                  ),
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      FadeIn(
+                        duration: const Duration(milliseconds: 600),
+                        child: const Text(
+                          'خلاصه آمار سفارشات',
+                          style: TextStyle(
+                            fontFamily: 'Vazir',
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.primary,
+                          ),
+                          textDirection: TextDirection.rtl,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      ...[
+                        {
+                          'label': 'در انتظار',
+                          'count': orderStats['pending']!,
+                          'color': Colors.blue.shade600
+                        },
+                        {
+                          'label': 'پردازش‌شده',
+                          'count': orderStats['processed']!,
+                          'color': Colors.green.shade600
+                        },
+                        {
+                          'label': 'خروج از انبار',
+                          'count': orderStats['shipped']!,
+                          'color': Colors.orange.shade600
+                        },
+                        {
+                          'label': 'تحویل‌شده',
+                          'count': orderStats['delivered']!,
+                          'color': Colors.teal.shade600
+                        },
+                        {
+                          'label': 'مرجوع‌شده',
+                          'count': orderStats['returned']!,
+                          'color': Colors.red.shade600
+                        },
+                        {
+                          'label': 'لغوشده',
+                          'count': orderStats['cancelled']!,
+                          'color': Colors.grey.shade600
+                        },
+                      ].map((stat) => FadeIn(
+                            duration: const Duration(milliseconds: 600),
+                            delay: Duration(
+                                milliseconds: 100 * (stat['count'] as int)),
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 6),
+                              child: Row(
+                                children: [
+                                  Container(
+                                    width: 16,
+                                    height: 16,
+                                    decoration: BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      color: stat['color'] as Color,
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: (stat['color'] as Color)
+                                              .withOpacity(0.3),
+                                          blurRadius: 4,
+                                          spreadRadius: 1,
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Text(
+                                      '${stat['label']}: ${stat['count']} سفارش',
+                                      style: const TextStyle(
+                                        fontFamily: 'Vazir',
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w500,
+                                        color: Colors.black87,
+                                      ),
+                                      textDirection: TextDirection.rtl,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          )),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
+              Wrap(
+                spacing: 16,
+                runSpacing: 12,
+                children: [
+                  _buildLegendItem('در انتظار', Colors.blue.shade600),
+                  _buildLegendItem('پردازش‌شده', Colors.green.shade600),
+                  _buildLegendItem('خروج از انبار', Colors.orange.shade600),
+                  _buildLegendItem('تحویل‌شده', Colors.teal.shade600),
+                  _buildLegendItem('مرجوع‌شده', Colors.red.shade600),
+                  _buildLegendItem('لغوشده', Colors.grey.shade600),
+                ],
+              ),
+            ],
+          ),
         );
       default:
-        return const Center(
-          child: Text(
-            'تب نامعتبر',
-            textDirection: TextDirection.rtl,
-            style: TextStyle(fontSize: 16, fontFamily: 'Vazir'),
+        return Center(
+          child: FadeIn(
+            duration: const Duration(milliseconds: 600),
+            child: const Text(
+              'تب نامعتبر',
+              textDirection: TextDirection.rtl,
+              style: TextStyle(
+                fontSize: 20,
+                fontFamily: 'Vazir',
+                fontWeight: FontWeight.w600,
+                color: AppColors.primary,
+              ),
+            ),
           ),
         );
     }
@@ -650,17 +867,28 @@ class HomeTab extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         Container(
-          width: 12,
-          height: 12,
+          width: 16,
+          height: 16,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             color: color,
+            boxShadow: [
+              BoxShadow(
+                color: color.withOpacity(0.3),
+                blurRadius: 4,
+                spreadRadius: 1,
+              ),
+            ],
           ),
         ),
-        const SizedBox(width: 6),
+        const SizedBox(width: 8),
         Text(
           label,
-          style: const TextStyle(fontFamily: 'Vazir', fontSize: 12),
+          style: const TextStyle(
+            fontFamily: 'Vazir',
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+          ),
           textDirection: TextDirection.rtl,
         ),
       ],
@@ -672,32 +900,32 @@ class HomeTab extends StatelessWidget {
       OrderStatus.pending: {
         'label': 'در صف پردازش',
         'icon': FontAwesomeIcons.hourglassStart,
-        'color': Colors.blue
+        'color': Colors.blue.shade600
       },
       OrderStatus.processed: {
         'label': 'پردازش‌شده',
         'icon': FontAwesomeIcons.cogs,
-        'color': Colors.green
+        'color': Colors.green.shade600
       },
       OrderStatus.shipped: {
         'label': 'خروج از انبار',
         'icon': FontAwesomeIcons.truck,
-        'color': Colors.orange
+        'color': Colors.orange.shade600
       },
       OrderStatus.delivered: {
         'label': 'تحویل‌شده',
         'icon': FontAwesomeIcons.checkCircle,
-        'color': Colors.teal
+        'color': Colors.teal.shade600
       },
       OrderStatus.returned: {
         'label': 'مرجوع‌شده',
         'icon': FontAwesomeIcons.undo,
-        'color': Colors.red
+        'color': Colors.red.shade600
       },
       OrderStatus.cancelled: {
         'label': 'لغوشده',
         'icon': FontAwesomeIcons.ban,
-        'color': Colors.grey
+        'color': Colors.grey.shade600
       },
     };
 
@@ -706,93 +934,116 @@ class HomeTab extends StatelessWidget {
         OrderStatus.values.take(currentStatusIndex + 1).toList();
 
     return Card(
-      elevation: 6,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-      margin: const EdgeInsets.symmetric(vertical: 8),
+      elevation: 8,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      margin: const EdgeInsets.symmetric(vertical: 12),
       child: Container(
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(15),
+          borderRadius: BorderRadius.circular(20),
           gradient: LinearGradient(
-            colors: [Colors.white, Colors.blue.shade50],
+            colors: [Colors.white, AppColors.primary.withOpacity(0.1)],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.15),
+              blurRadius: 12,
+              spreadRadius: 4,
+            ),
+          ],
         ),
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              'سفارش #${order.id}',
-              style: const TextStyle(
+            FadeIn(
+              duration: const Duration(milliseconds: 600),
+              child: Text(
+                'سفارش #${order.id}',
+                style: const TextStyle(
                   fontFamily: 'Vazir',
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold),
-              textDirection: TextDirection.rtl,
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.primary,
+                ),
+                textDirection: TextDirection.rtl,
+              ),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 16),
             ...statusesToShow.asMap().entries.map((entry) {
               final index = entry.key;
               final status = entry.value;
               final isLast = index == statusesToShow.length - 1;
-              return Row(
-                children: [
-                  Column(
-                    children: [
-                      AnimatedContainer(
-                        duration: const Duration(milliseconds: 300),
-                        width: 40,
-                        height: 40,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: statusMap[status]!['color'] as Color,
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.grey.withOpacity(0.3),
-                              spreadRadius: 2,
-                              blurRadius: 5,
-                            ),
-                          ],
-                        ),
-                        child: FaIcon(
-                          statusMap[status]!['icon'] as IconData,
-                          color: Colors.white,
-                          size: 20,
-                        ),
-                      ),
-                      if (!isLast)
-                        Container(
-                          width: 2,
-                          height: 40,
-                          color: Colors.grey.shade300,
-                        ),
-                    ],
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+              return FadeInUp(
+                duration: const Duration(milliseconds: 600),
+                delay: Duration(milliseconds: 200 * index),
+                child: Row(
+                  children: [
+                    Column(
                       children: [
-                        Text(
-                          statusMap[status]!['label'] as String,
-                          style: const TextStyle(
-                              fontFamily: 'Vazir',
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600),
-                          textDirection: TextDirection.rtl,
+                        AnimatedContainer(
+                          duration: const Duration(milliseconds: 400),
+                          width: 48,
+                          height: 48,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: statusMap[status]!['color'] as Color,
+                            boxShadow: [
+                              BoxShadow(
+                                color: (statusMap[status]!['color'] as Color)
+                                    .withOpacity(0.4),
+                                spreadRadius: 3,
+                                blurRadius: 8,
+                              ),
+                            ],
+                          ),
+                          child: FaIcon(
+                            statusMap[status]!['icon'] as IconData,
+                            color: Colors.white,
+                            size: 24,
+                          ),
                         ),
-                        Text(
-                          'تاریخ: ${order.createdAt.toString().substring(0, 10)}',
-                          style: TextStyle(
-                              fontFamily: 'Vazir',
-                              fontSize: 14,
-                              color: Colors.grey.shade600),
-                          textDirection: TextDirection.rtl,
-                        ),
+                        if (!isLast)
+                          Container(
+                            width: 4,
+                            height: 48,
+                            decoration: BoxDecoration(
+                              color: Colors.grey.shade300,
+                              borderRadius: BorderRadius.circular(2),
+                            ),
+                          ),
                       ],
                     ),
-                  ),
-                ],
+                    const SizedBox(width: 20),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            statusMap[status]!['label'] as String,
+                            style: const TextStyle(
+                              fontFamily: 'Vazir',
+                              fontSize: 18,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.primary,
+                            ),
+                            textDirection: TextDirection.rtl,
+                          ),
+                          Text(
+                            'تاریخ: ${order.createdAt.toString().substring(0, 10)}',
+                            style: TextStyle(
+                              fontFamily: 'Vazir',
+                              fontSize: 14,
+                              color: Colors.grey.shade600,
+                            ),
+                            textDirection: TextDirection.rtl,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
               );
             }).toList(),
           ],
@@ -813,53 +1064,58 @@ class HomeTab extends StatelessWidget {
         debugPrint('Switching to menu tab: $tab');
         onTabChanged(tab);
       },
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 300),
-        width: 120,
-        height: 80,
-        margin: const EdgeInsets.symmetric(horizontal: 8),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(15),
-          gradient: LinearGradient(
-            colors: isSelected
-                ? [AppColors.accent, AppColors.primary.withOpacity(0.9)]
-                : [Colors.grey.shade200, Colors.grey.shade300],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.grey.withOpacity(isSelected ? 0.5 : 0.3),
-              spreadRadius: isSelected ? 3 : 2,
-              blurRadius: isSelected ? 8 : 5,
-              offset: const Offset(0, 3),
+      child: ZoomIn(
+        duration: const Duration(milliseconds: 600),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 400),
+          width: 140,
+          height: 100,
+          margin: const EdgeInsets.symmetric(horizontal: 12),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(20),
+            gradient: LinearGradient(
+              colors: isSelected
+                  ? [AppColors.accent, AppColors.primary]
+                  : [Colors.grey.shade100, Colors.grey.shade200],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
             ),
-          ],
-          border: isSelected
-              ? Border.all(color: Colors.white, width: 2)
-              : Border.all(color: Colors.transparent),
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            FaIcon(
-              icon,
-              color: isSelected ? Colors.white : Colors.grey.shade700,
-              size: 28,
-            ),
-            const SizedBox(height: 6),
-            Text(
-              label,
-              style: TextStyle(
-                fontFamily: 'Vazir',
-                fontSize: 14,
-                color: isSelected ? Colors.white : Colors.grey.shade700,
-                fontWeight: FontWeight.bold,
+            boxShadow: [
+              BoxShadow(
+                color: isSelected
+                    ? AppColors.accent.withOpacity(0.5)
+                    : Colors.grey.withOpacity(0.3),
+                spreadRadius: isSelected ? 4 : 2,
+                blurRadius: isSelected ? 10 : 6,
+                offset: const Offset(0, 4),
               ),
-              textAlign: TextAlign.center,
-              textDirection: TextDirection.rtl,
-            ),
-          ],
+            ],
+            border: isSelected
+                ? Border.all(color: Colors.white, width: 2.5)
+                : Border.all(color: Colors.transparent),
+          ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              FaIcon(
+                icon,
+                color: isSelected ? Colors.white : AppColors.primary,
+                size: 32,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                label,
+                style: TextStyle(
+                  fontFamily: 'Vazir',
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: isSelected ? Colors.white : AppColors.primary,
+                ),
+                textAlign: TextAlign.center,
+                textDirection: TextDirection.rtl,
+              ),
+            ],
+          ),
         ),
       ),
     );
