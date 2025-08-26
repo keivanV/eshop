@@ -50,16 +50,13 @@ Note : Default user / pass For adminPannel : admin / admin
     </tr>
     <tr>
       <td><img src="project_images/screen3.png" alt="Bookmarks" width="300"/></td>
-    </tr>
-    <tr>
-        <td><img src="project_images/screen4.png" alt="Bookmarks" width="300"/></td>
+       <td><img src="project_images/screen4.png" alt="Bookmarks" width="300"/></td>
     </tr>
     <tr>
       <td><img src="project_images/screen5.png" alt="Bookmarks" width="300"/></td>
+       <td><img src="project_images/screen6.png" alt="Bookmarks" width="300"/></td>
     </tr>
-    <tr>
-      <td><img src="project_images/screen6.png" alt="Bookmarks" width="300"/></td>
-    </tr>
+
   </table>
 
   <h4>💎 Admin Panel</h4>
