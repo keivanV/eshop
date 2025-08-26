@@ -47,12 +47,10 @@ Note : Default user / pass For adminPannel : admin / admin
     <tr>
       <td><img src="project_images/screen1.png" alt="Home Screen" width="300"/></td>
       <td><img src="project_images/screen2.png" alt="Ad Details" width="300"/></td>
-      
     </tr>
     <tr>
       <td><img src="project_images/screen2.png" alt="Bookmarks" width="300"/></td>
       <td><img src="project_images/screen3.png" alt="Bookmarks" width="300"/></td>
-
     </tr>
     <tr>
       <td><img src="project_images/screen4.png" alt="Bookmarks" width="300"/></td>
