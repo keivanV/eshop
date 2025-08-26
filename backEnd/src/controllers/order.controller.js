@@ -1,11 +1,12 @@
+const mongoose = require('mongoose');
 const Order = require('../models/order.model');
 const Product = require('../models/product.model');
 const Inventory = require('../models/inventory.model');
 
 exports.createOrder = async (req, res) => {
-  const { products, totalAmount } = req.body;
-
   try {
+    const { products, totalAmount } = req.body;
+
     // Validate request body
     if (!products || !Array.isArray(products) || !totalAmount) {
       return res.status(400).json({ msg: 'Invalid request: products and totalAmount are required' });
@@ -24,7 +25,6 @@ exports.createOrder = async (req, res) => {
         return res.status(400).json({ msg: `Insufficient stock for ${product.name}` });
       }
 
-      // Ensure inventory record exists
       let inventory = await Inventory.findOne({ product: item.product });
       if (!inventory) {
         console.log(`Creating inventory for product: ${item.product}, quantity: ${product.stock}`);
@@ -42,14 +42,11 @@ exports.createOrder = async (req, res) => {
 
     // Deduct stock and inventory
     for (const item of products) {
-      const inventory = await Inventory.findOne({ product: item.product });
-      inventory.quantity -= item.quantity;
-      inventory.lastUpdated = new Date();
-      await inventory.save();
-
-      const product = await Product.findById(item.product);
-      product.stock -= item.quantity;
-      await product.save();
+      await Inventory.findOneAndUpdate(
+        { product: item.product },
+        { $inc: { quantity: -item.quantity }, lastUpdated: new Date() }
+      );
+      await Product.findByIdAndUpdate(item.product, { $inc: { stock: -item.quantity } });
     }
 
     res.status(201).json(order);
@@ -67,7 +64,7 @@ exports.getOrders = async (req, res) => {
     if (userRole === 'user') {
       query.user = req.user._id;
     } else if (userRole === 'warehouse_manager') {
-      query.status = { $in: ['pending', 'processed'] }; // Updated to include both pending and processed
+      query.status = { $in: ['pending', 'processed'] };
     } else if (userRole === 'delivery_agent') {
       query.status = { $in: ['processed', 'shipped'] };
     } else if (userRole !== 'admin') {
@@ -98,37 +95,55 @@ exports.getOrderById = async (req, res) => {
 
 exports.cancelOrder = async (req, res) => {
   try {
-    const order = await Order.findById(req.params.id);
-    if (!order) return res.status(404).json({ msg: 'Order not found' });
+    console.log(`Attempting to cancel order ${req.params.id} by user ${req.user._id} with role ${req.user.role.name}`);
+    const order = await Order.findById(req.params.id).populate('products.product');
+    if (!order) {
+      console.log(`Order ${req.params.id} not found`);
+      return res.status(404).json({ msg: 'Order not found' });
+    }
 
     const userRole = req.user.role.name;
+    console.log(`Order status: ${order.status}, User role: ${userRole}`);
     if (userRole === 'user' && (order.user.toString() !== req.user._id.toString() || order.status !== 'pending')) {
-      return res.status(403).json({ msg: 'Cannot cancel' });
-    } else if (userRole === 'warehouse_manager' && order.status !== 'pending') {
-      return res.status(403).json({ msg: 'Cannot cancel non-pending orders' });
-    } else if (!['user', 'warehouse_manager'].includes(userRole)) {
-      return res.status(403).json({ msg: 'Access denied' });
+      console.log(`Access denied for user: userId mismatch or status is ${order.status}`);
+      return res.status(403).json({ msg: 'Cannot cancel: Only pending orders owned by the user can be cancelled' });
+    } else if (['warehouse_manager', 'admin'].includes(userRole) && order.status !== 'pending') {
+      console.log(`Access denied for ${userRole}: status is ${order.status}`);
+      return res.status(403).json({ msg: 'Cannot cancel: Only pending orders can be cancelled' });
+    } else if (!['user', 'warehouse_manager', 'admin'].includes(userRole)) {
+      console.log(`Access denied: Insufficient permissions for role ${userRole}`);
+      return res.status(403).json({ msg: 'Access denied: Insufficient permissions' });
     }
 
+    // Update order status to cancelled
     order.status = 'cancelled';
     await order.save();
+    console.log(`Order ${order._id} status updated to cancelled`);
 
-    // Restore stock
+    // Restore stock and inventory
     for (const item of order.products) {
-      const inventory = await Inventory.findOne({ product: item.product });
-      if (inventory) {
-        inventory.quantity += item.quantity;
-        inventory.lastUpdated = new Date();
-        await inventory.save();
+      if (!item.product) {
+        console.warn(`Product not found for item: ${item.product}`);
+        continue;
       }
-      const product = await Product.findById(item.product);
-      if (product) {
-        product.stock += item.quantity;
-        await product.save();
+
+      // Update inventory
+      let inventory = await Inventory.findOne({ product: item.product._id });
+      if (!inventory) {
+        console.log(`Creating inventory record for product: ${item.product._id}`);
+        inventory = new Inventory({ product: item.product._id, quantity: 0, lastUpdated: new Date() });
       }
+      inventory.quantity += item.quantity;
+      inventory.lastUpdated = new Date();
+      await inventory.save();
+      console.log(`Restored ${item.quantity} to inventory for product: ${item.product.name}`);
+
+      // Update product stock
+      await Product.findByIdAndUpdate(item.product._id, { $inc: { stock: item.quantity } });
+      console.log(`Restored ${item.quantity} to stock for product: ${item.product.name}`);
     }
 
-    res.json(order);
+    res.json({ msg: 'Order cancelled successfully', order });
   } catch (error) {
     console.error('Error cancelling order:', error);
     res.status(500).json({ msg: 'Server error while cancelling order', error: error.message });
@@ -140,7 +155,7 @@ exports.requestReturn = async (req, res) => {
     const order = await Order.findById(req.params.id);
     if (!order) return res.status(404).json({ msg: 'Order not found' });
     if (order.user.toString() !== req.user._id.toString() || order.status !== 'delivered') {
-      return res.status(403).json({ msg: 'Cannot request return' });
+      return res.status(403).json({ msg: 'Cannot request return: Only delivered orders can be returned' });
     }
     order.returnRequest = true;
     await order.save();
@@ -154,7 +169,7 @@ exports.requestReturn = async (req, res) => {
 exports.updateOrderStatus = async (req, res) => {
   try {
     const { status } = req.body;
-    const order = await Order.findById(req.params.id);
+    const order = await Order.findById(req.params.id).populate('products.product');
     if (!order) return res.status(404).json({ msg: 'Order not found' });
 
     const userRole = req.user.role.name;
@@ -167,7 +182,10 @@ exports.updateOrderStatus = async (req, res) => {
         from: ['processed', 'shipped'],
         to: ['delivered', 'returned']
       },
-      'admin': { from: ['pending', 'processed', 'shipped', 'delivered', 'returned', 'cancelled'], to: ['pending', 'processed', 'shipped', 'delivered', 'returned', 'cancelled'] }
+      'admin': {
+        from: ['pending', 'processed', 'shipped', 'delivered', 'returned', 'cancelled'],
+        to: ['pending', 'processed', 'shipped', 'delivered', 'returned', 'cancelled']
+      }
     };
 
     if (!allowedTransitions[userRole] || !allowedTransitions[userRole].from.includes(order.status) || !allowedTransitions[userRole].to.includes(status)) {
@@ -184,17 +202,24 @@ exports.updateOrderStatus = async (req, res) => {
     if (status === 'returned') {
       // Restore stock for returned items
       for (const item of order.products) {
-        const inventory = await Inventory.findOne({ product: item.product });
-        if (inventory) {
-          inventory.quantity += item.quantity;
-          inventory.lastUpdated = new Date();
-          await inventory.save();
+        const product = item.product;
+        if (!product) {
+          console.warn(`Product not found for item: ${item.product}`);
+          continue;
         }
-        const product = await Product.findById(item.product);
-        if (product) {
-          product.stock += item.quantity;
-          await product.save();
+
+        let inventory = await Inventory.findOne({ product: item.product._id });
+        if (!inventory) {
+          console.log(`Creating inventory record for product: ${item.product._id}`);
+          inventory = new Inventory({ product: item.product._id, quantity: 0, lastUpdated: new Date() });
         }
+        inventory.quantity += item.quantity;
+        inventory.lastUpdated = new Date();
+        await inventory.save();
+        console.log(`Restored ${item.quantity} to inventory for product: ${product.name}`);
+
+        await Product.findByIdAndUpdate(item.product._id, { $inc: { stock: item.quantity } });
+        console.log(`Restored ${item.quantity} to stock for product: ${product.name}`);
       }
     }
 

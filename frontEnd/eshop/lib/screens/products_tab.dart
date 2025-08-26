@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:animate_do/animate_do.dart';
+import 'package:shop_app/providers/auth_provider.dart';
+import 'package:shop_app/routes/app_routes.dart';
 import '../providers/product_provider.dart';
 import '../widgets/product_card.dart';
 import '../constants.dart';
@@ -47,6 +49,8 @@ class _ProductsTabState extends State<ProductsTab>
   @override
   Widget build(BuildContext context) {
     final productProvider = Provider.of<ProductProvider>(context);
+    final authProvider = Provider.of<AuthProvider>(context,
+        listen: false); // فرض بر وجود AuthProvider
     final screenWidth = MediaQuery.of(context).size.width;
     // Calculate maxCrossAxisExtent dynamically (140 card width + 20 spacing)
     const cardWidth = 140.0;
@@ -55,86 +59,105 @@ class _ProductsTabState extends State<ProductsTab>
         (screenWidth / (cardWidth + spacing)).floor().clamp(2, 4);
     final maxCrossAxisExtent = screenWidth / crossAxisCount;
 
-    return Container(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [AppColors.primary.withOpacity(0.15), Colors.white],
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text(
+          'محصولات',
+          style: TextStyle(
+            fontFamily: 'Vazir',
+            fontWeight: FontWeight.bold,
+            fontSize: 20,
+            color: Colors.white,
+          ),
         ),
-      ),
-      child: Column(
-        children: [
-          Padding(
-            padding:
-                const EdgeInsets.symmetric(vertical: 20.0, horizontal: 20.0),
-            child: FadeInDown(
-              duration: const Duration(milliseconds: 800),
-              child: Text(
-                'محصولات',
-                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                      fontFamily: 'Vazir',
-                      fontSize: 28,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.primary,
-                    ),
-                textDirection: TextDirection.rtl,
-              ),
+        backgroundColor: AppColors.primary,
+        elevation: 4,
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [AppColors.primary, Colors.blueAccent],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
             ),
           ),
-          Expanded(
-            child: RefreshIndicator(
-              color: AppColors.accent,
-              backgroundColor: Colors.white,
-              onRefresh: () async {
-                debugPrint('Manual refresh triggered for products');
-                setState(() {
-                  _fetchProductsFuture =
-                      Provider.of<ProductProvider>(context, listen: false)
-                          .fetchProducts();
-                  _animationController.reset();
-                  _animationController.forward();
-                });
-              },
-              child: FutureBuilder(
-                future: _fetchProductsFuture,
-                builder: (ctx, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting) {
-                    return Center(child: _buildCustomLoader());
-                  }
-                  if (snapshot.hasError) {
-                    return Center(
-                        child: _buildErrorCard(snapshot.error
-                            .toString()
-                            .replaceFirst('Exception: ', '')));
-                  }
-                  if (productProvider.products.isEmpty) {
-                    return Center(child: _buildNoProductsCard());
-                  }
-                  return GridView.builder(
-                    padding: const EdgeInsets.all(20),
-                    gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
-                      maxCrossAxisExtent: maxCrossAxisExtent,
-                      childAspectRatio: 2 / 3,
-                      crossAxisSpacing: spacing,
-                      mainAxisSpacing: spacing,
-                    ),
-                    itemCount: productProvider.products.length,
-                    itemBuilder: (_, i) {
-                      final product = productProvider.products[i];
-                      debugPrint('Building ProductCard for ${product.id}');
-                      return FadeInUp(
-                        duration: const Duration(milliseconds: 600),
-                        delay: Duration(milliseconds: 200 * i),
-                        child: ProductCard(product: product),
-                      );
-                    },
-                  );
-                },
-              ),
-            ),
+        ),
+        actions: [
+          IconButton(
+            icon:
+                const FaIcon(FontAwesomeIcons.signOutAlt, color: Colors.white),
+            tooltip: 'خروج',
+            onPressed: () async {
+              await authProvider.logout();
+              Navigator.pushNamedAndRemoveUntil(
+                  context, AppRoutes.login, (route) => false);
+            },
           ),
         ],
+      ),
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [AppColors.primary.withOpacity(0.15), Colors.white],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+          ),
+        ),
+        child: Column(
+          children: [
+            Expanded(
+              child: RefreshIndicator(
+                color: AppColors.accent,
+                backgroundColor: Colors.white,
+                onRefresh: () async {
+                  debugPrint('Manual refresh triggered for products');
+                  setState(() {
+                    _fetchProductsFuture =
+                        Provider.of<ProductProvider>(context, listen: false)
+                            .fetchProducts();
+                    _animationController.reset();
+                    _animationController.forward();
+                  });
+                },
+                child: FutureBuilder(
+                  future: _fetchProductsFuture,
+                  builder: (ctx, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return Center(child: _buildCustomLoader());
+                    }
+                    if (snapshot.hasError) {
+                      return Center(
+                          child: _buildErrorCard(snapshot.error
+                              .toString()
+                              .replaceFirst('Exception: ', '')));
+                    }
+                    if (productProvider.products.isEmpty) {
+                      return Center(child: _buildNoProductsCard());
+                    }
+                    return GridView.builder(
+                      padding: const EdgeInsets.all(20),
+                      gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
+                        maxCrossAxisExtent: maxCrossAxisExtent,
+                        childAspectRatio: 2 / 3,
+                        crossAxisSpacing: spacing,
+                        mainAxisSpacing: spacing,
+                      ),
+                      itemCount: productProvider.products.length,
+                      itemBuilder: (_, i) {
+                        final product = productProvider.products[i];
+                        debugPrint('Building ProductCard for ${product.id}');
+                        return FadeInUp(
+                          duration: const Duration(milliseconds: 600),
+                          delay: Duration(milliseconds: 200 * i),
+                          child: ProductCard(product: product),
+                        );
+                      },
+                    );
+                  },
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

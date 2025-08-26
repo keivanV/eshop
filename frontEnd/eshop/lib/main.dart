@@ -30,6 +30,7 @@ class MyApp extends StatelessWidget {
       ],
       child: MaterialApp(
         title: 'اپلیکیشن مدیریت انبار',
+        debugShowCheckedModeBanner: false,
         theme: ThemeData(
           primarySwatch: AppColors.primarySwatch,
           scaffoldBackgroundColor: AppColors.background,

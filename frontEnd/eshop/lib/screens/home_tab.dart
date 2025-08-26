@@ -8,7 +8,7 @@ import '../providers/auth_provider.dart';
 import '../providers/order_provider.dart';
 import '../constants.dart';
 
-class HomeTab extends StatelessWidget {
+class HomeTab extends StatefulWidget {
   final String role;
   final String selectedHomeTab;
   final bool userDataError;
@@ -16,7 +16,8 @@ class HomeTab extends StatelessWidget {
   final GlobalKey<FormState> formKey;
   final TextEditingController usernameController;
   final TextEditingController emailController;
-  final Future<void> Function(AuthProvider) onUpdateProfile;
+  final TextEditingController passwordController; // اضافه شده
+  final Future<void> Function(AuthProvider, {String? password}) onUpdateProfile;
   final Future<void> Function(AuthProvider) onFetchUserData;
   final Future<void> Function() onRefreshData;
   final void Function(String) onTabChanged;
@@ -30,11 +31,50 @@ class HomeTab extends StatelessWidget {
     required this.formKey,
     required this.usernameController,
     required this.emailController,
+    required this.passwordController,
     required this.onUpdateProfile,
     required this.onFetchUserData,
     required this.onRefreshData,
     required this.onTabChanged,
   });
+
+  @override
+  _HomeTabState createState() => _HomeTabState();
+}
+
+class _HomeTabState extends State<HomeTab> {
+  bool _isPasswordVisible = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // Initialize controllers with current user data
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    widget.usernameController.text = authProvider.username ?? '';
+    widget.emailController.text = authProvider.email ?? '';
+  }
+
+  @override
+  void dispose() {
+    super.dispose();
+  }
+
+  String? _validateEmail(String? value) {
+    if (value == null || value.trim().isEmpty) {
+      return 'لطفاً ایمیل را وارد کنید';
+    }
+    if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value.trim())) {
+      return 'ایمیل نامعتبر است';
+    }
+    return null;
+  }
+
+  String? _validatePassword(String? value) {
+    if (value != null && value.trim().isNotEmpty && value.trim().length < 6) {
+      return 'رمز عبور باید حداقل ۶ کاراکتر باشد';
+    }
+    return null;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -44,21 +84,6 @@ class HomeTab extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            FadeInDown(
-              duration: const Duration(milliseconds: 800),
-              child: const Text(
-                'مدیریت حساب',
-                style: TextStyle(
-                  fontFamily: 'Vazir',
-                  fontSize: 28,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.primary,
-                ),
-                textDirection: TextDirection.rtl,
-              ),
-            ),
-            const SizedBox(height: 24),
-            _buildHomeMenuSection(context),
             const SizedBox(height: 24),
             AnimatedSwitcher(
               duration: const Duration(milliseconds: 400),
@@ -80,49 +105,17 @@ class HomeTab extends StatelessWidget {
     );
   }
 
-  Widget _buildHomeMenuSection(BuildContext context) {
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: Row(
-        children: [
-          _buildMenuCard(
-            context: context,
-            icon: FontAwesomeIcons.userEdit,
-            label: 'ویرایش اطلاعات',
-            tab: 'edit_profile',
-            isSelected: selectedHomeTab == 'edit_profile',
-          ),
-          if (role == 'user')
-            _buildMenuCard(
-              context: context,
-              icon: FontAwesomeIcons.listCheck,
-              label: 'روند سفارشات',
-              tab: 'order_progress',
-              isSelected: selectedHomeTab == 'order_progress',
-            ),
-          _buildMenuCard(
-            context: context,
-            icon: FontAwesomeIcons.chartPie,
-            label: 'گزارش سفارشات',
-            tab: 'order_report',
-            isSelected: selectedHomeTab == 'order_report',
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _buildHomeTabContent(BuildContext context) {
     final authProvider = Provider.of<AuthProvider>(context);
     final orderProvider = Provider.of<OrderProvider>(context);
 
-    switch (selectedHomeTab) {
+    switch (widget.selectedHomeTab) {
       case 'edit_profile':
         return FadeInUp(
           duration: const Duration(milliseconds: 800),
           child: Column(
             children: [
-              if (userDataError)
+              if (widget.userDataError)
                 Padding(
                   padding: const EdgeInsets.only(bottom: 20),
                   child: ZoomIn(
@@ -141,7 +134,7 @@ class HomeTab extends StatelessWidget {
                         ],
                       ),
                       child: Text(
-                        'خطا در بارگذاری اطلاعات کاربر: $userDataErrorMessage',
+                        'خطا در بارگذاری اطلاعات کاربر: ${widget.userDataErrorMessage}',
                         style: const TextStyle(
                           fontFamily: 'Vazir',
                           fontSize: 16,
@@ -155,20 +148,21 @@ class HomeTab extends StatelessWidget {
                   ),
                 ),
               Form(
-                key: formKey,
+                key: widget.formKey,
                 child: Column(
                   children: [
                     TextFormField(
-                      controller: usernameController,
+                      controller: widget.usernameController,
+                      enabled: false, // Disable username field
                       decoration: InputDecoration(
                         labelText: 'نام کاربری',
                         labelStyle: const TextStyle(
                           fontFamily: 'Vazir',
-                          fontSize: 16,
+                          fontSize: 15,
                           color: AppColors.primary,
                         ),
                         filled: true,
-                        fillColor: Colors.white,
+                        fillColor: Colors.grey.shade200,
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(16),
                           borderSide: BorderSide.none,
@@ -178,10 +172,10 @@ class HomeTab extends StatelessWidget {
                           borderSide: BorderSide(
                               color: AppColors.primary.withOpacity(0.2)),
                         ),
-                        focusedBorder: OutlineInputBorder(
+                        disabledBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(16),
-                          borderSide: const BorderSide(
-                              color: AppColors.accent, width: 2),
+                          borderSide: BorderSide(
+                              color: AppColors.primary.withOpacity(0.2)),
                         ),
                         prefixIcon: const FaIcon(FontAwesomeIcons.user,
                             color: AppColors.primary),
@@ -190,21 +184,15 @@ class HomeTab extends StatelessWidget {
                       ),
                       textDirection: TextDirection.rtl,
                       style: const TextStyle(fontFamily: 'Vazir', fontSize: 16),
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'لطفاً نام کاربری را وارد کنید';
-                        }
-                        return null;
-                      },
                     ),
                     const SizedBox(height: 20),
                     TextFormField(
-                      controller: emailController,
+                      controller: widget.emailController,
                       decoration: InputDecoration(
                         labelText: 'ایمیل',
                         labelStyle: const TextStyle(
                           fontFamily: 'Vazir',
-                          fontSize: 16,
+                          fontSize: 15,
                           color: AppColors.primary,
                         ),
                         filled: true,
@@ -221,7 +209,8 @@ class HomeTab extends StatelessWidget {
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(16),
                           borderSide: const BorderSide(
-                              color: AppColors.accent, width: 2),
+                              color: Color.fromARGB(255, 18, 51, 219),
+                              width: 2),
                         ),
                         prefixIcon: const FaIcon(FontAwesomeIcons.envelope,
                             color: AppColors.primary),
@@ -230,24 +219,77 @@ class HomeTab extends StatelessWidget {
                       ),
                       textDirection: TextDirection.rtl,
                       style: const TextStyle(fontFamily: 'Vazir', fontSize: 16),
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'لطفاً ایمیل را وارد کنید';
-                        }
-                        if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$')
-                            .hasMatch(value)) {
-                          return 'ایمیل نامعتبر است';
-                        }
-                        return null;
-                      },
+                      validator: _validateEmail,
+                    ),
+                    const SizedBox(height: 20),
+                    TextFormField(
+                      controller: widget.passwordController,
+                      obscureText: !_isPasswordVisible,
+                      decoration: InputDecoration(
+                        labelText: 'رمز عبور جدید (اختیاری)',
+                        labelStyle: const TextStyle(
+                          fontFamily: 'Vazir',
+                          fontSize: 15,
+                          color: AppColors.primary,
+                        ),
+                        filled: true,
+                        fillColor: Colors.white,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(16),
+                          borderSide: BorderSide.none,
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(16),
+                          borderSide: BorderSide(
+                              color: AppColors.primary.withOpacity(0.2)),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(16),
+                          borderSide: const BorderSide(
+                              color: Color.fromARGB(255, 18, 51, 219),
+                              width: 2),
+                        ),
+                        prefixIcon: const FaIcon(FontAwesomeIcons.lock,
+                            color: AppColors.primary),
+                        suffixIcon: IconButton(
+                          icon: FaIcon(
+                            _isPasswordVisible
+                                ? FontAwesomeIcons.eye
+                                : FontAwesomeIcons.eyeSlash,
+                            color: AppColors.primary,
+                          ),
+                          onPressed: () {
+                            setState(() {
+                              _isPasswordVisible = !_isPasswordVisible;
+                            });
+                          },
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 14),
+                      ),
+                      textDirection: TextDirection.rtl,
+                      style: const TextStyle(fontFamily: 'Vazir', fontSize: 16),
+                      validator: _validatePassword,
                     ),
                     const SizedBox(height: 24),
                     Bounce(
                       duration: const Duration(milliseconds: 800),
                       child: ElevatedButton(
-                        onPressed: () => onUpdateProfile(authProvider),
+                        onPressed: () async {
+                          if (widget.formKey.currentState!.validate()) {
+                            await widget.onUpdateProfile(
+                              authProvider,
+                              password:
+                                  widget.passwordController.text.isNotEmpty
+                                      ? widget.passwordController.text
+                                      : null,
+                            );
+                            widget.passwordController.clear();
+                          }
+                        },
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.accent,
+                          backgroundColor:
+                              const Color.fromARGB(255, 6, 35, 181),
                           foregroundColor: Colors.white,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(16),
@@ -267,14 +309,14 @@ class HomeTab extends StatelessWidget {
                         ),
                       ),
                     ),
-                    if (userDataError)
+                    if (widget.userDataError)
                       Padding(
                         padding: const EdgeInsets.only(top: 20),
                         child: Bounce(
                           duration: const Duration(milliseconds: 800),
                           child: ElevatedButton(
                             onPressed: () async {
-                              await onFetchUserData(authProvider);
+                              await widget.onFetchUserData(authProvider);
                             },
                             style: ElevatedButton.styleFrom(
                               backgroundColor: Colors.blueGrey.shade600,
@@ -345,7 +387,7 @@ class HomeTab extends StatelessWidget {
                   Bounce(
                     duration: const Duration(milliseconds: 800),
                     child: ElevatedButton(
-                      onPressed: onRefreshData,
+                      onPressed: widget.onRefreshData,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.accent,
                         foregroundColor: Colors.white,
@@ -655,7 +697,7 @@ class HomeTab extends StatelessWidget {
                   Bounce(
                     duration: const Duration(milliseconds: 800),
                     child: ElevatedButton(
-                      onPressed: onRefreshData,
+                      onPressed: widget.onRefreshData,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.accent,
                         foregroundColor: Colors.white,
@@ -1047,75 +1089,6 @@ class HomeTab extends StatelessWidget {
               );
             }).toList(),
           ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildMenuCard({
-    required BuildContext context,
-    required IconData icon,
-    required String label,
-    required String tab,
-    required bool isSelected,
-  }) {
-    return GestureDetector(
-      onTap: () {
-        debugPrint('Switching to menu tab: $tab');
-        onTabChanged(tab);
-      },
-      child: ZoomIn(
-        duration: const Duration(milliseconds: 600),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 400),
-          width: 140,
-          height: 100,
-          margin: const EdgeInsets.symmetric(horizontal: 12),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(20),
-            gradient: LinearGradient(
-              colors: isSelected
-                  ? [AppColors.accent, AppColors.primary]
-                  : [Colors.grey.shade100, Colors.grey.shade200],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: isSelected
-                    ? AppColors.accent.withOpacity(0.5)
-                    : Colors.grey.withOpacity(0.3),
-                spreadRadius: isSelected ? 4 : 2,
-                blurRadius: isSelected ? 10 : 6,
-                offset: const Offset(0, 4),
-              ),
-            ],
-            border: isSelected
-                ? Border.all(color: Colors.white, width: 2.5)
-                : Border.all(color: Colors.transparent),
-          ),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              FaIcon(
-                icon,
-                color: isSelected ? Colors.white : AppColors.primary,
-                size: 32,
-              ),
-              const SizedBox(height: 8),
-              Text(
-                label,
-                style: TextStyle(
-                  fontFamily: 'Vazir',
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: isSelected ? Colors.white : AppColors.primary,
-                ),
-                textAlign: TextAlign.center,
-                textDirection: TextDirection.rtl,
-              ),
-            ],
-          ),
         ),
       ),
     );

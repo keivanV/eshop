@@ -33,11 +33,11 @@ class _CartScreenState extends State<CartScreen>
     debugPrint('CartScreen initState');
     _animationController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1200),
+      duration: const Duration(milliseconds: 800),
     );
     _fadeAnimation = CurvedAnimation(
       parent: _animationController,
-      curve: Curves.easeInOutCubic,
+      curve: Curves.easeInOut,
     );
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _animationController.forward();
@@ -120,12 +120,12 @@ class _CartScreenState extends State<CartScreen>
           'توکن شما منقضی شده، لطفاً مجدد وارد شوید',
           textDirection: TextDirection.rtl,
           style:
-              TextStyle(fontFamily: 'Vazir', fontSize: 14, color: Colors.white),
+              TextStyle(fontFamily: 'Vazir', fontSize: 13, color: Colors.white),
         ),
         backgroundColor: Colors.red.shade600,
         duration: const Duration(seconds: 3),
         behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       ),
     );
     await authProvider.logout();
@@ -167,7 +167,7 @@ class _CartScreenState extends State<CartScreen>
               builder: (ctx, cartProvider, _) {
                 debugPrint('Rendering cart items');
                 return ListView.builder(
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.all(12),
                   itemCount: cartProvider.items.length,
                   itemBuilder: (ctx, i) {
                     final entry = cartProvider.items.entries.elementAt(i);
@@ -186,8 +186,8 @@ class _CartScreenState extends State<CartScreen>
                         ? product.imageUrls!.first
                         : 'https://placehold.co/50x50';
                     return FadeInUp(
-                      duration: const Duration(milliseconds: 600),
-                      delay: Duration(milliseconds: 200 * i),
+                      duration: const Duration(milliseconds: 400),
+                      delay: Duration(milliseconds: 100 * i),
                       child: Dismissible(
                         key: Key(entry.key),
                         direction: DismissDirection.endToStart,
@@ -201,46 +201,47 @@ class _CartScreenState extends State<CartScreen>
                                 textDirection: TextDirection.rtl,
                                 style: const TextStyle(
                                     fontFamily: 'Vazir',
-                                    fontSize: 12,
+                                    fontSize: 11,
                                     color: Colors.white),
                               ),
                               backgroundColor: Colors.red.shade600,
                               duration: const Duration(seconds: 2),
                               behavior: SnackBarBehavior.floating,
                               shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(10)),
+                                  borderRadius: BorderRadius.circular(8)),
                             ),
                           );
                         },
                         background: Container(
                           color: Colors.red.shade600,
                           alignment: Alignment.centerRight,
-                          padding: const EdgeInsets.only(right: 16),
+                          padding: const EdgeInsets.only(right: 12),
                           child: const FaIcon(FontAwesomeIcons.trash,
-                              color: Colors.white, size: 24),
+                              color: Colors.white, size: 18),
                         ),
                         child: Card(
                           elevation: 0,
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(16),
-                            side: BorderSide(color: Colors.black87, width: 1.5),
+                            borderRadius: BorderRadius.circular(12),
                           ),
                           color: Colors.white,
                           child: Padding(
-                            padding: const EdgeInsets.all(8.0),
+                            padding: const EdgeInsets.all(6.0),
                             child: ListTile(
+                              contentPadding:
+                                  const EdgeInsets.symmetric(horizontal: 8),
                               leading: ClipRRect(
-                                borderRadius: BorderRadius.circular(8),
+                                borderRadius: BorderRadius.circular(6),
                                 child: Image.network(
                                   imageUrl,
-                                  width: 48,
-                                  height: 48,
+                                  width: 40,
+                                  height: 40,
                                   fit: BoxFit.cover,
                                   errorBuilder: (context, error, stackTrace) =>
                                       const FaIcon(
                                     FontAwesomeIcons.image,
                                     color: Colors.grey,
-                                    size: 32,
+                                    size: 24,
                                   ),
                                 ),
                               ),
@@ -249,8 +250,8 @@ class _CartScreenState extends State<CartScreen>
                                 textDirection: TextDirection.rtl,
                                 style: const TextStyle(
                                   fontFamily: 'Vazir',
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 13,
                                   color: AppColors.primary,
                                 ),
                                 maxLines: 1,
@@ -261,11 +262,11 @@ class _CartScreenState extends State<CartScreen>
                                 children: [
                                   const SizedBox(height: 4),
                                   Text(
-                                    'تعداد: ${entry.value} | قیمت: ${(product.price * entry.value).toStringAsFixed(0)} تومان',
+                                    'تعداد: ${entry.value} | ${(product.price * entry.value).toStringAsFixed(0)} تومان',
                                     textDirection: TextDirection.rtl,
                                     style: TextStyle(
                                       fontFamily: 'Vazir',
-                                      fontSize: 12,
+                                      fontSize: 10,
                                       color: Colors.grey.shade600,
                                     ),
                                   ),
@@ -274,7 +275,7 @@ class _CartScreenState extends State<CartScreen>
                                     textDirection: TextDirection.rtl,
                                     style: TextStyle(
                                       fontFamily: 'Vazir',
-                                      fontSize: 12,
+                                      fontSize: 10,
                                       color: product.stock >= entry.value
                                           ? Colors.green.shade600
                                           : Colors.red.shade600,
@@ -286,7 +287,7 @@ class _CartScreenState extends State<CartScreen>
                                 icon: FaIcon(
                                   FontAwesomeIcons.minusCircle,
                                   color: Colors.red.shade600,
-                                  size: 20,
+                                  size: 16,
                                 ),
                                 onPressed: () {
                                   debugPrint(
@@ -309,52 +310,46 @@ class _CartScreenState extends State<CartScreen>
           : BottomAppBar(
               color: Colors.white,
               child: Container(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [
-                      AppColors.primary.withOpacity(0.1),
-                      AppColors.accent.withOpacity(0.1)
-                    ],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  border: Border(
-                      top: BorderSide(color: Colors.black87, width: 1.5)),
-                ),
                 padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  border: Border(
+                      top: BorderSide(color: Colors.grey.shade300, width: 1)),
+                ),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     FadeInUp(
-                      duration: const Duration(milliseconds: 600),
+                      duration: const Duration(milliseconds: 400),
                       child: Text(
-                        'جمع کل: ${cartProvider.getTotalAmount(productProvider.products).toStringAsFixed(0)} تومان',
+                        'جمع: ${cartProvider.getTotalAmount(productProvider.products).toStringAsFixed(0)} تومان',
                         style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
                           fontFamily: 'Vazir',
                           color: AppColors.primary,
                         ),
                         textDirection: TextDirection.rtl,
                       ),
                     ),
-                    Bounce(
-                      duration: const Duration(milliseconds: 600),
+                    ZoomIn(
+                      duration: const Duration(milliseconds: 400),
                       child: Container(
                         decoration: BoxDecoration(
                           gradient: LinearGradient(
-                            colors: [AppColors.accent, AppColors.primary],
+                            colors: [
+                              AppColors.accent,
+                              AppColors.primary.withOpacity(0.9)
+                            ],
                             begin: Alignment.topLeft,
                             end: Alignment.bottomRight,
                           ),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: Colors.black87, width: 1),
+                          borderRadius: BorderRadius.circular(8),
                           boxShadow: [
                             BoxShadow(
-                              color: AppColors.accent.withOpacity(0.3),
-                              blurRadius: 8,
-                              spreadRadius: 2,
+                              color: AppColors.accent.withOpacity(0.2),
+                              blurRadius: 6,
+                              offset: const Offset(0, 2),
                             ),
                           ],
                         ),
@@ -391,14 +386,14 @@ class _CartScreenState extends State<CartScreen>
                                     textDirection: TextDirection.rtl,
                                     style: TextStyle(
                                         fontFamily: 'Vazir',
-                                        fontSize: 12,
+                                        fontSize: 11,
                                         color: Colors.white),
                                   ),
                                   backgroundColor: AppColors.accent,
                                   duration: const Duration(seconds: 2),
                                   behavior: SnackBarBehavior.floating,
                                   shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(10)),
+                                      borderRadius: BorderRadius.circular(8)),
                                 ),
                               );
                               Navigator.pushNamed(
@@ -424,23 +419,24 @@ class _CartScreenState extends State<CartScreen>
                               });
                             }
                           },
-                          icon: const FaIcon(FontAwesomeIcons.checkCircle,
-                              color: Colors.white, size: 18),
+                          icon: const FaIcon(FontAwesomeIcons.check,
+                              color: Colors.white, size: 14),
                           label: const Text(
                             'ثبت سفارش',
                             style: TextStyle(
-                                fontFamily: 'Vazir',
-                                fontSize: 14,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white),
+                              fontFamily: 'Vazir',
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.white,
+                            ),
                           ),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.transparent,
                             foregroundColor: Colors.white,
                             shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12)),
+                                borderRadius: BorderRadius.circular(8)),
                             padding: const EdgeInsets.symmetric(
-                                horizontal: 16, vertical: 10),
+                                horizontal: 12, vertical: 6),
                             elevation: 0,
                             shadowColor: Colors.transparent,
                           ),
@@ -457,41 +453,35 @@ class _CartScreenState extends State<CartScreen>
   PreferredSizeWidget _buildAppBar() {
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     return AppBar(
-      title: FadeInDown(
-        duration: const Duration(milliseconds: 800),
-        child: const Text(
-          'سبد خرید',
-          style: TextStyle(
-              fontFamily: 'Vazir',
-              fontSize: 22,
-              fontWeight: FontWeight.bold,
-              color: Colors.white),
+      title: const Text(
+        'سبد خرید',
+        style: TextStyle(
+          fontFamily: 'Vazir',
+          fontWeight: FontWeight.bold,
+          fontSize: 20,
+          color: Colors.white,
         ),
       ),
       backgroundColor: AppColors.primary,
-      elevation: 0,
+      elevation: 4,
       flexibleSpace: Container(
-        decoration: BoxDecoration(
+        decoration: const BoxDecoration(
           gradient: LinearGradient(
-            colors: [AppColors.primary, AppColors.accent.withOpacity(0.7)],
+            colors: [AppColors.primary, Colors.blueAccent],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
         ),
       ),
       actions: [
-        FadeInDown(
-          duration: const Duration(milliseconds: 800),
-          child: IconButton(
-            icon: const FaIcon(FontAwesomeIcons.rightFromBracket,
-                color: Colors.white, size: 20),
-            tooltip: 'خروج',
-            onPressed: () async {
-              await authProvider.logout();
-              Navigator.pushNamedAndRemoveUntil(
-                  context, AppRoutes.login, (route) => false);
-            },
-          ),
+        IconButton(
+          icon: const FaIcon(FontAwesomeIcons.signOutAlt, color: Colors.white),
+          tooltip: 'خروج',
+          onPressed: () async {
+            await authProvider.logout();
+            Navigator.pushNamedAndRemoveUntil(
+                context, AppRoutes.login, (route) => false);
+          },
         ),
       ],
     );
@@ -499,38 +489,37 @@ class _CartScreenState extends State<CartScreen>
 
   Widget _buildCustomLoader() {
     return FadeIn(
-      duration: const Duration(milliseconds: 1000),
+      duration: const Duration(milliseconds: 800),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           ZoomIn(
-            duration: const Duration(milliseconds: 800),
+            duration: const Duration(milliseconds: 600),
             child: Container(
-              padding: const EdgeInsets.all(24),
+              padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
                 color: Colors.white,
                 shape: BoxShape.circle,
                 boxShadow: [
                   BoxShadow(
-                    color: AppColors.primary.withOpacity(0.4),
-                    blurRadius: 20,
-                    spreadRadius: 6,
+                    color: AppColors.primary.withOpacity(0.3),
+                    blurRadius: 12,
+                    spreadRadius: 4,
                   ),
                 ],
-                border: Border.all(color: Colors.black87, width: 1.5),
               ),
               child: const CircularProgressIndicator(
                 valueColor: AlwaysStoppedAnimation<Color>(AppColors.accent),
-                strokeWidth: 8,
+                strokeWidth: 4,
               ),
             ),
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 12),
           const Text(
-            'در حال بارگذاری سبد خرید...',
+            'در حال بارگذاری...',
             style: TextStyle(
               fontFamily: 'Vazir',
-              fontSize: 18,
+              fontSize: 16,
               fontWeight: FontWeight.w600,
               color: AppColors.primary,
             ),
@@ -543,48 +532,47 @@ class _CartScreenState extends State<CartScreen>
 
   Widget _buildErrorCard() {
     return FadeInUp(
-      duration: const Duration(milliseconds: 800),
+      duration: const Duration(milliseconds: 600),
       child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 20),
-        padding: const EdgeInsets.all(24),
+        margin: const EdgeInsets.symmetric(horizontal: 16),
+        padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(12),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.2),
-              blurRadius: 12,
-              spreadRadius: 3,
+              color: Colors.black.withOpacity(0.1),
+              blurRadius: 8,
+              spreadRadius: 2,
             ),
           ],
-          border: Border.all(color: Colors.black87, width: 1.5),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             ZoomIn(
-              duration: const Duration(milliseconds: 600),
+              duration: const Duration(milliseconds: 400),
               child: const FaIcon(
                 FontAwesomeIcons.exclamationTriangle,
                 color: Colors.redAccent,
-                size: 48,
+                size: 32,
               ),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 12),
             Text(
               'خطا: $_errorMessage',
               textDirection: TextDirection.rtl,
               style: const TextStyle(
-                fontSize: 18,
+                fontSize: 14,
                 fontFamily: 'Vazir',
                 fontWeight: FontWeight.w600,
                 color: Colors.redAccent,
               ),
               textAlign: TextAlign.center,
             ),
-            const SizedBox(height: 20),
-            Bounce(
-              duration: const Duration(milliseconds: 800),
+            const SizedBox(height: 12),
+            ZoomIn(
+              duration: const Duration(milliseconds: 400),
               child: Container(
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
@@ -592,8 +580,7 @@ class _CartScreenState extends State<CartScreen>
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   ),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.black87, width: 1),
+                  borderRadius: BorderRadius.circular(8),
                 ),
                 child: ElevatedButton(
                   onPressed: () {
@@ -606,18 +593,18 @@ class _CartScreenState extends State<CartScreen>
                     backgroundColor: Colors.transparent,
                     foregroundColor: Colors.white,
                     shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12)),
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 32, vertical: 12),
-                    elevation: 6,
-                    shadowColor: AppColors.accent.withOpacity(0.4),
+                        borderRadius: BorderRadius.circular(8)),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+                    elevation: 0,
+                    shadowColor: Colors.transparent,
                   ),
                   child: const Text(
                     'تلاش مجدد',
                     style: TextStyle(
                       fontFamily: 'Vazir',
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
                 ),
@@ -631,46 +618,45 @@ class _CartScreenState extends State<CartScreen>
 
   Widget _buildEmptyCartCard() {
     return FadeInUp(
-      duration: const Duration(milliseconds: 800),
+      duration: const Duration(milliseconds: 600),
       child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 20),
-        padding: const EdgeInsets.all(24),
+        margin: const EdgeInsets.symmetric(horizontal: 16),
+        padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(12),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.2),
-              blurRadius: 12,
-              spreadRadius: 3,
+              color: Colors.black.withOpacity(0.1),
+              blurRadius: 8,
+              spreadRadius: 2,
             ),
           ],
-          border: Border.all(color: Colors.black87, width: 1.5),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             ZoomIn(
-              duration: const Duration(milliseconds: 600),
+              duration: const Duration(milliseconds: 400),
               child: const FaIcon(
                 FontAwesomeIcons.cartShopping,
                 color: AppColors.primary,
-                size: 48,
+                size: 32,
               ),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 12),
             const Text(
               'سبد خرید شما خالی است',
               textDirection: TextDirection.rtl,
               style: TextStyle(
-                fontSize: 18,
+                fontSize: 14,
                 fontFamily: 'Vazir',
                 fontWeight: FontWeight.w600,
                 color: AppColors.primary,
               ),
               textAlign: TextAlign.center,
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 12),
           ],
         ),
       ),

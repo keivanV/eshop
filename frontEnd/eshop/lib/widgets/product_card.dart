@@ -47,34 +47,35 @@ class _ProductCardState extends State<ProductCard> {
       onTapUp: (_) => setState(() => _isHovered = false),
       onTapCancel: () => setState(() => _isHovered = false),
       child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 140),
+        constraints:
+            const BoxConstraints(maxWidth: 140, maxHeight: 240), // کاهش ارتفاع
         child: FadeIn(
-          duration: const Duration(milliseconds: 600),
+          duration: const Duration(milliseconds: 400),
           child: AnimatedContainer(
-            duration: const Duration(milliseconds: 300),
-            curve: Curves.easeInOutCubic,
-            transform: Matrix4.identity()..scale(_isHovered ? 1.05 : 1.0),
+            duration: const Duration(milliseconds: 200),
+            curve: Curves.easeInOut,
+            transform: Matrix4.identity()..scale(_isHovered ? 1.03 : 1.0),
             transformAlignment: Alignment.center,
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(20),
+              borderRadius: BorderRadius.circular(16),
               color: Colors.white,
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(_isHovered ? 0.25 : 0.15),
-                  spreadRadius: _isHovered ? 3 : 2,
-                  blurRadius: _isHovered ? 10 : 6,
-                  offset: const Offset(0, 3),
+                  color: Colors.black.withOpacity(_isHovered ? 0.2 : 0.1),
+                  spreadRadius: 1,
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
                 ),
               ],
               border: Border.all(
-                color: _isHovered ? Colors.black : Colors.black87,
-                width: _isHovered ? 2 : 1.5,
+                color: _isHovered ? AppColors.accent : Colors.grey.shade300,
+                width: 1,
               ),
             ),
             child: Card(
               elevation: 0,
               shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(20)),
+                  borderRadius: BorderRadius.circular(16)),
               color: Colors.transparent,
               child: Stack(
                 children: [
@@ -83,31 +84,31 @@ class _ProductCardState extends State<ProductCard> {
                     children: [
                       ClipRRect(
                         borderRadius: const BorderRadius.vertical(
-                            top: Radius.circular(20)),
+                            top: Radius.circular(16)),
                         child: AnimatedOpacity(
-                          opacity: widget.product.stock > 0 ? 1.0 : 0.7,
-                          duration: const Duration(milliseconds: 300),
+                          opacity: widget.product.stock > 0 ? 1.0 : 0.6,
+                          duration: const Duration(milliseconds: 200),
                           child: Column(
                             children: [
                               Container(
                                 decoration: BoxDecoration(
                                   boxShadow: [
                                     BoxShadow(
-                                      color: Colors.black.withOpacity(0.15),
-                                      blurRadius: 6,
+                                      color: Colors.black.withOpacity(0.1),
+                                      blurRadius: 4,
                                       spreadRadius: 1,
                                     ),
                                   ],
                                 ),
                                 child: CarouselSlider(
                                   options: CarouselOptions(
-                                    height: 100,
+                                    height: 80, // کاهش ارتفاع تصویر
                                     autoPlay: imageUrls.length > 1,
                                     autoPlayInterval:
                                         const Duration(seconds: 3),
                                     autoPlayAnimationDuration:
-                                        const Duration(milliseconds: 800),
-                                    autoPlayCurve: Curves.easeInOutCubic,
+                                        const Duration(milliseconds: 600),
+                                    autoPlayCurve: Curves.easeInOut,
                                     enlargeCenterPage: true,
                                     viewportFraction: 1.0,
                                     onPageChanged: (index, reason) {
@@ -126,19 +127,19 @@ class _ProductCardState extends State<ProductCard> {
                                         imageUrl: url,
                                         fit: BoxFit.cover,
                                         width: double.infinity,
-                                        height: 100,
-                                        memCacheHeight: 200,
-                                        memCacheWidth: 280,
+                                        height: 80,
+                                        memCacheHeight: 160,
+                                        memCacheWidth: 240,
                                         placeholder: (context, url) =>
                                             Container(
                                           color: Colors.grey[100],
-                                          height: 100,
+                                          height: 80,
                                           child: Center(
                                             child: CircularProgressIndicator(
                                               valueColor:
                                                   AlwaysStoppedAnimation(
                                                       AppColors.accent),
-                                              strokeWidth: 5,
+                                              strokeWidth: 4,
                                             ),
                                           ),
                                         ),
@@ -147,12 +148,12 @@ class _ProductCardState extends State<ProductCard> {
                                               'Image load error for $url: $error');
                                           return Container(
                                             color: Colors.grey[100],
-                                            height: 100,
+                                            height: 80,
                                             child: const Center(
                                               child: FaIcon(
                                                 FontAwesomeIcons.image,
                                                 color: Colors.grey,
-                                                size: 32,
+                                                size: 28,
                                               ),
                                             ),
                                           );
@@ -165,30 +166,22 @@ class _ProductCardState extends State<ProductCard> {
                               if (imageUrls.length > 1)
                                 Padding(
                                   padding:
-                                      const EdgeInsets.symmetric(vertical: 6.0),
+                                      const EdgeInsets.symmetric(vertical: 4.0),
                                   child: Row(
                                     mainAxisAlignment: MainAxisAlignment.center,
                                     children:
                                         imageUrls.asMap().entries.map((entry) {
                                       return Container(
-                                        width: 6.0,
-                                        height: 6.0,
+                                        width: 5.0,
+                                        height: 5.0,
                                         margin: const EdgeInsets.symmetric(
-                                            horizontal: 3.0),
+                                            horizontal: 2.0),
                                         decoration: BoxDecoration(
                                           shape: BoxShape.circle,
                                           color: AppColors.accent.withOpacity(
                                               _currentImageIndex == entry.key
-                                                  ? 0.9
-                                                  : 0.4),
-                                          boxShadow: [
-                                            BoxShadow(
-                                              color: AppColors.accent
-                                                  .withOpacity(0.3),
-                                              blurRadius: 3,
-                                              spreadRadius: 1,
-                                            ),
-                                          ],
+                                                  ? 1.0
+                                                  : 0.3),
                                         ),
                                       );
                                     }).toList(),
@@ -199,7 +192,7 @@ class _ProductCardState extends State<ProductCard> {
                         ),
                       ),
                       Padding(
-                        padding: const EdgeInsets.all(10.0),
+                        padding: const EdgeInsets.all(8.0), // کاهش padding
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
@@ -207,7 +200,7 @@ class _ProductCardState extends State<ProductCard> {
                               widget.product.name,
                               style: const TextStyle(
                                 fontWeight: FontWeight.bold,
-                                fontSize: 16,
+                                fontSize: 14, // کاهش اندازه فونت
                                 fontFamily: 'Vazir',
                                 color: AppColors.primary,
                               ),
@@ -215,57 +208,41 @@ class _ProductCardState extends State<ProductCard> {
                               overflow: TextOverflow.ellipsis,
                               textDirection: TextDirection.rtl,
                             ),
-                            const SizedBox(height: 6),
+                            const SizedBox(height: 4),
                             if (widget.product.description != null &&
                                 widget.product.description!.isNotEmpty)
-                              ExpansionTile(
-                                title: Text(
-                                  'توضیحات',
-                                  style: TextStyle(
-                                    fontFamily: 'Vazir',
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w600,
-                                    color: widget.product.stock > 0
-                                        ? AppColors.primary
-                                        : Colors.grey.shade500,
-                                  ),
-                                  textDirection: TextDirection.rtl,
+                              Text(
+                                widget.product.description!.length > 50
+                                    ? '${widget.product.description!.substring(0, 50)}...'
+                                    : widget.product.description!,
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  color: widget.product.stock > 0
+                                      ? Colors.grey.shade600
+                                      : Colors.grey.shade400,
+                                  fontFamily: 'Vazir',
                                 ),
-                                children: [
-                                  Padding(
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 12, vertical: 6),
-                                    child: Text(
-                                      widget.product.description!,
-                                      style: TextStyle(
-                                        fontSize: 11,
-                                        color: widget.product.stock > 0
-                                            ? Colors.grey.shade600
-                                            : Colors.grey.shade400,
-                                        fontFamily: 'Vazir',
-                                      ),
-                                      textDirection: TextDirection.rtl,
-                                    ),
-                                  ),
-                                ],
+                                textDirection: TextDirection.rtl,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
                               ),
-                            const SizedBox(height: 6),
+                            const SizedBox(height: 4),
                             Row(
                               children: [
                                 FaIcon(
                                   FontAwesomeIcons.box,
-                                  size: 14,
+                                  size: 12,
                                   color: widget.product.stock > 0
                                       ? Colors.green.shade600
                                       : Colors.red.shade600,
                                 ),
-                                const SizedBox(width: 6),
+                                const SizedBox(width: 4),
                                 Text(
                                   widget.product.stock > 0
                                       ? 'موجودی: ${widget.product.stock}'
                                       : 'ناموجود',
                                   style: TextStyle(
-                                    fontSize: 12,
+                                    fontSize: 10,
                                     color: widget.product.stock > 0
                                         ? Colors.green.shade600
                                         : Colors.red.shade600,
@@ -276,21 +253,21 @@ class _ProductCardState extends State<ProductCard> {
                                 ),
                               ],
                             ),
-                            const SizedBox(height: 6),
+                            const SizedBox(height: 4),
                             Row(
                               children: [
                                 FaIcon(
                                   FontAwesomeIcons.tag,
-                                  size: 14,
+                                  size: 12,
                                   color: widget.product.stock > 0
                                       ? AppColors.accent
                                       : Colors.grey.shade400,
                                 ),
-                                const SizedBox(width: 6),
+                                const SizedBox(width: 4),
                                 Text(
                                   'قیمت: ${widget.product.price.toStringAsFixed(0)} تومان',
                                   style: TextStyle(
-                                    fontSize: 12,
+                                    fontSize: 10,
                                     color: widget.product.stock > 0
                                         ? AppColors.accent
                                         : Colors.grey.shade400,
@@ -301,7 +278,7 @@ class _ProductCardState extends State<ProductCard> {
                                 ),
                               ],
                             ),
-                            const SizedBox(height: 10),
+                            const SizedBox(height: 8),
                             if (widget.product.stock > 0)
                               Row(
                                 mainAxisAlignment:
@@ -312,7 +289,7 @@ class _ProductCardState extends State<ProductCard> {
                                       IconButton(
                                         icon: FaIcon(
                                           FontAwesomeIcons.minus,
-                                          size: 16,
+                                          size: 14,
                                           color: AppColors.accent,
                                         ),
                                         onPressed: () {
@@ -327,19 +304,20 @@ class _ProductCardState extends State<ProductCard> {
                                       ),
                                       Container(
                                         padding: const EdgeInsets.symmetric(
-                                            horizontal: 10, vertical: 4),
+                                            horizontal: 8, vertical: 2),
                                         decoration: BoxDecoration(
                                           border: Border.all(
-                                              color: Colors.black87, width: 1),
+                                              color: Colors.grey.shade400,
+                                              width: 1),
                                           borderRadius:
-                                              BorderRadius.circular(8),
+                                              BorderRadius.circular(6),
                                           color: Colors.white,
                                         ),
                                         child: Text(
                                           '$_quantity',
                                           style: const TextStyle(
                                             fontFamily: 'Vazir',
-                                            fontSize: 14,
+                                            fontSize: 12,
                                             fontWeight: FontWeight.bold,
                                             color: AppColors.primary,
                                           ),
@@ -348,7 +326,7 @@ class _ProductCardState extends State<ProductCard> {
                                       IconButton(
                                         icon: FaIcon(
                                           FontAwesomeIcons.plus,
-                                          size: 16,
+                                          size: 14,
                                           color: AppColors.accent,
                                         ),
                                         onPressed: () {
@@ -364,31 +342,29 @@ class _ProductCardState extends State<ProductCard> {
                                       ),
                                     ],
                                   ),
-                                  Bounce(
-                                    duration: const Duration(milliseconds: 600),
+                                  ZoomIn(
+                                    duration: const Duration(milliseconds: 400),
                                     child: Container(
                                       decoration: BoxDecoration(
                                         gradient: LinearGradient(
                                           colors: [
                                             AppColors.accent,
-                                            AppColors.primary,
+                                            AppColors.primary.withOpacity(0.8),
                                           ],
                                           begin: Alignment.topLeft,
                                           end: Alignment.bottomRight,
                                         ),
-                                        borderRadius: BorderRadius.circular(10),
-                                        border: Border.all(
-                                            color: Colors.black87, width: 1),
+                                        borderRadius: BorderRadius.circular(8),
                                         boxShadow: [
                                           BoxShadow(
                                             color: AppColors.accent.withOpacity(
-                                                _isHovered ? 0.5 : 0.3),
-                                            blurRadius: _isHovered ? 10 : 6,
-                                            offset: const Offset(0, 3),
+                                                _isHovered ? 0.4 : 0.2),
+                                            blurRadius: 6,
+                                            offset: const Offset(0, 2),
                                           ),
                                         ],
                                       ),
-                                      child: ElevatedButton.icon(
+                                      child: ElevatedButton(
                                         onPressed: () {
                                           cartProvider.addItem(
                                               widget.product, _quantity);
@@ -403,7 +379,7 @@ class _ProductCardState extends State<ProductCard> {
                                                     TextDirection.rtl,
                                                 style: const TextStyle(
                                                   fontFamily: 'Vazir',
-                                                  fontSize: 12,
+                                                  fontSize: 10,
                                                   color: Colors.white,
                                                 ),
                                               ),
@@ -414,42 +390,42 @@ class _ProductCardState extends State<ProductCard> {
                                                   SnackBarBehavior.floating,
                                               shape: RoundedRectangleBorder(
                                                 borderRadius:
-                                                    BorderRadius.circular(10),
+                                                    BorderRadius.circular(8),
                                               ),
                                             ),
                                           );
                                         },
-                                        icon: AnimatedSwitcher(
-                                          duration:
-                                              const Duration(milliseconds: 300),
-                                          child: FaIcon(
-                                            FontAwesomeIcons.cartPlus,
-                                            key: ValueKey(
-                                                widget.product.stock > 0),
-                                            size: 16,
-                                            color: Colors.white,
-                                          ),
-                                        ),
-                                        label: const Text(
-                                          'ثبت',
-                                          style: TextStyle(
-                                            fontFamily: 'Vazir',
-                                            fontSize: 12,
-                                            fontWeight: FontWeight.bold,
-                                            color: Colors.white,
-                                          ),
-                                        ),
                                         style: ElevatedButton.styleFrom(
                                           backgroundColor: Colors.transparent,
                                           foregroundColor: Colors.white,
                                           shape: RoundedRectangleBorder(
                                             borderRadius:
-                                                BorderRadius.circular(10),
+                                                BorderRadius.circular(8),
                                           ),
                                           padding: const EdgeInsets.symmetric(
-                                              horizontal: 10, vertical: 8),
+                                              horizontal: 8, vertical: 6),
                                           elevation: 0,
                                           shadowColor: Colors.transparent,
+                                        ),
+                                        child: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            FaIcon(
+                                              FontAwesomeIcons.cartPlus,
+                                              size: 14,
+                                              color: Colors.white,
+                                            ),
+                                            const SizedBox(width: 4),
+                                            const Text(
+                                              'ثبت',
+                                              style: TextStyle(
+                                                fontFamily: 'Vazir',
+                                                fontSize: 10,
+                                                fontWeight: FontWeight.bold,
+                                                color: Colors.white,
+                                              ),
+                                            ),
+                                          ],
                                         ),
                                       ),
                                     ),
@@ -463,21 +439,20 @@ class _ProductCardState extends State<ProductCard> {
                   ),
                   if (widget.product.stock == 0)
                     Positioned(
-                      top: 10,
-                      right: 10,
+                      top: 8,
+                      right: 8,
                       child: ZoomIn(
-                        duration: const Duration(milliseconds: 600),
+                        duration: const Duration(milliseconds: 400),
                         child: Container(
                           padding: const EdgeInsets.symmetric(
-                              horizontal: 8, vertical: 4),
+                              horizontal: 6, vertical: 3),
                           decoration: BoxDecoration(
                             color: Colors.red.shade600,
-                            borderRadius: BorderRadius.circular(10),
-                            border: Border.all(color: Colors.black87, width: 1),
+                            borderRadius: BorderRadius.circular(8),
                             boxShadow: [
                               BoxShadow(
-                                color: Colors.black.withOpacity(0.2),
-                                blurRadius: 5,
+                                color: Colors.black.withOpacity(0.15),
+                                blurRadius: 4,
                                 spreadRadius: 1,
                               ),
                             ],
@@ -486,7 +461,7 @@ class _ProductCardState extends State<ProductCard> {
                             'ناموجود',
                             style: TextStyle(
                               fontFamily: 'Vazir',
-                              fontSize: 10,
+                              fontSize: 9,
                               color: Colors.white,
                               fontWeight: FontWeight.bold,
                             ),

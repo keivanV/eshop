@@ -39,6 +39,8 @@ class ApiService {
           'token': data['token'],
           'role': data['role'],
           'userId': decoded['id'],
+          'username': data['username'],
+          'email': data['email'], // اضافه کردن ایمیل
         };
       } catch (e) {
         throw Exception('خطا در رمزگشایی توکن: $e');
@@ -68,7 +70,9 @@ class ApiService {
         return {
           'token': data['token'],
           'userId': decoded['id'],
-          'role': role,
+          'role': data['role'],
+          'username': data['username'],
+          'email': data['email'], // اضافه کردن ایمیل
         };
       } catch (e) {
         throw Exception('خطا در رمزگشایی توکن: $e');
@@ -307,8 +311,7 @@ class ApiService {
   static Future<List<dynamic>> getOrders(String token,
       [String role = '', String userId = '']) async {
     final baseUrl = _cleanBaseUrl();
-    final url =
-        '$baseUrl/api/orders'; // Always use /api/orders, backend filters by role
+    final url = '$baseUrl/api/orders';
     final response = await http.get(
       Uri.parse(url),
       headers: {
@@ -412,9 +415,11 @@ class ApiService {
   }
 
   static Future<Map<String, dynamic>> updateUser(
-      String userId, String token, String username, String email) async {
+      String userId, String token, String email,
+      {String? password}) async {
     final baseUrl = _cleanBaseUrl();
     try {
+
       final response = await http.put(
         Uri.parse('$baseUrl/api/users/$userId'),
         headers: {
@@ -422,16 +427,18 @@ class ApiService {
           'Content-Type': 'application/json',
         },
         body: jsonEncode({
-          'username': username,
           'email': email,
+          if (password != null) 'password': password,
         }),
       );
+
       if (response.statusCode == 200) {
         return jsonDecode(response.body);
       }
       throw Exception(
           'Failed to update user: ${response.statusCode} - ${response.body}');
     } catch (e) {
+
       rethrow;
     }
   }
@@ -493,5 +500,26 @@ class ApiService {
       return json.decode(response.body);
     }
     return null; // Handle 404 gracefully
+  }
+
+  static Future<Map<String, dynamic>> getUserByUsername(
+      String username, String token) async {
+    final baseUrl = _cleanBaseUrl();
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl/api/users/username/$username'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+      );
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      }
+      throw Exception(
+          'Failed to fetch user by username: ${response.statusCode} - ${response.body}');
+    } catch (e) {
+      rethrow;
+    }
   }
 }

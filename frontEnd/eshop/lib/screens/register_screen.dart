@@ -159,7 +159,7 @@ class _RegisterScreenState extends State<RegisterScreen>
       body: Container(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
-            colors: [Color.fromARGB(255, 151, 151, 151), Color.fromARGB(255, 44, 44, 44)],
+            colors: [Colors.deepPurple, Color(0xFF1976D2)],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
@@ -249,8 +249,8 @@ class _RegisterScreenState extends State<RegisterScreen>
                               decoration: BoxDecoration(
                                 gradient: const LinearGradient(
                                   colors: [
-                                    Color(0xff11998e),
-                                    Color(0xff38ef7d),
+                                    Color(0xFF1976D2), // آبی پررنگ
+                                    Color(0xFF42A5F5), // آبی روشن
                                   ],
                                   begin: Alignment.topLeft,
                                   end: Alignment.bottomRight,

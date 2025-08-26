@@ -50,7 +50,6 @@ class _LoginScreenState extends State<LoginScreen>
     super.dispose();
   }
 
-  /// نمایش پیام خطا با Flushbar
   void _showErrorMessage(String message) {
     Flushbar(
       margin: const EdgeInsets.all(12),
@@ -77,7 +76,6 @@ class _LoginScreenState extends State<LoginScreen>
     ).show(context);
   }
 
-  /// متد ورود
   void _login() async {
     try {
       await Provider.of<AuthProvider>(context, listen: false).login(
@@ -94,13 +92,11 @@ class _LoginScreenState extends State<LoginScreen>
     } catch (e) {
       if (mounted) {
         String errorMessage = "خطا در برقراری ارتباط. لطفا دوباره تلاش کنید.";
-
         if (e.toString().contains("Invalid credentials")) {
           errorMessage = "نام کاربری یا رمز عبور اشتباه است.";
         } else if (e.toString().contains("timeout")) {
           errorMessage = "اتصال برقرار نشد. اینترنت خود را بررسی کنید.";
         }
-
         _showErrorMessage(errorMessage);
       }
     }
@@ -114,7 +110,10 @@ class _LoginScreenState extends State<LoginScreen>
       body: Container(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
-            colors: [Color.fromARGB(255, 151, 151, 151), Color.fromARGB(255, 44, 44, 44)],
+            colors: [
+              Colors.deepPurple,
+              Color(0xFF1976D2)
+            ], // تم سفید و آبی پررنگ
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
@@ -138,17 +137,15 @@ class _LoginScreenState extends State<LoginScreen>
                         child: Container(
                           padding: const EdgeInsets.all(24.0),
                           decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.15),
+                            color: Colors.white.withOpacity(0.2), // سفید شفاف
                             borderRadius: BorderRadius.circular(24),
                             border: Border.all(
-                              color: Colors.white.withOpacity(0.3),
-                              width: 1.2,
-                            ),
+                                color: Colors.white.withOpacity(0.5),
+                                width: 1.2),
                           ),
                           child: Column(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              // Logo
                               ScaleTransition(
                                 scale: Tween<double>(begin: 0.8, end: 1.1)
                                     .animate(CurvedAnimation(
@@ -169,7 +166,7 @@ class _LoginScreenState extends State<LoginScreen>
                                     .headlineMedium
                                     ?.copyWith(
                                   fontFamily: 'Vazir',
-                                  color: Colors.white,
+                                  color: Colors.white, // متن سفید
                                   fontWeight: FontWeight.bold,
                                   shadows: [
                                     Shadow(
@@ -213,8 +210,8 @@ class _LoginScreenState extends State<LoginScreen>
                                   decoration: BoxDecoration(
                                     gradient: const LinearGradient(
                                       colors: [
-                                        Color(0xff11998e),
-                                        Color(0xff38ef7d),
+                                        Color(0xFF1976D2), // آبی پررنگ
+                                        Color(0xFF42A5F5), // آبی روشن
                                       ],
                                       begin: Alignment.topLeft,
                                       end: Alignment.bottomRight,
@@ -265,7 +262,7 @@ class _LoginScreenState extends State<LoginScreen>
                                   style: TextStyle(
                                     fontFamily: 'Vazir',
                                     fontSize: 15,
-                                    color: Colors.white,
+                                    color: Colors.white, // سفید
                                     fontWeight: FontWeight.bold,
                                     decoration: TextDecoration.underline,
                                   ),
@@ -286,7 +283,6 @@ class _LoginScreenState extends State<LoginScreen>
     );
   }
 
-  /// ویجت آماده برای تکست‌فیلدها
   Widget _buildTextField({
     required TextEditingController controller,
     required String label,
@@ -300,7 +296,7 @@ class _LoginScreenState extends State<LoginScreen>
         labelText: label,
         labelStyle: const TextStyle(
           fontFamily: 'Vazir',
-          color: Colors.white,
+          color: Colors.white, // سفید
         ),
         prefixIcon: Icon(icon, color: Colors.white),
         suffixIcon: isPassword
@@ -319,7 +315,7 @@ class _LoginScreenState extends State<LoginScreen>
               )
             : null,
         filled: true,
-        fillColor: Colors.white.withOpacity(0.1),
+        fillColor: Colors.white.withOpacity(0.1), // پس‌زمینه سفید شفاف
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
           borderSide: BorderSide.none,
@@ -327,7 +323,7 @@ class _LoginScreenState extends State<LoginScreen>
       ),
       style: const TextStyle(
         fontFamily: 'Vazir',
-        color: Colors.white,
+        color: Colors.white, // متن سفید
       ),
       textDirection: TextDirection.rtl,
     );
