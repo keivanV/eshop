@@ -57,118 +57,8 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
       return 'عدم دسترسی: لطفاً با حساب مدیر وارد شوید';
     } else if (error.contains('404')) {
       return 'کاربری یافت نشد';
-    } else if (error.contains('400')) {
-      if (error.contains('Email already taken')) {
-        return 'ایمیل قبلاً استفاده شده است';
-      }
-      return 'خطا در درخواست: اطلاعات نامعتبر است';
     } else {
       return error.replaceFirst('Exception: ', '');
-    }
-  }
-
-  Future<void> _updateUser(User user, String newEmail,
-      {String? newPassword}) async {
-    final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    try {
-      debugPrint(
-          'Updating user: userId=${user.id}, email=$newEmail, password=${newPassword != null ? 'provided' : 'null'}');
-      await ApiService.updateUser(
-        user.id, // استفاده از user.id به جای user.username
-        authProvider.token!,
-        newEmail,
-        password: newPassword,
-      );
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text(
-              'کاربر با موفقیت به‌روزرسانی شد',
-              textDirection: TextDirection.rtl,
-              style: TextStyle(
-                  fontFamily: 'Vazir', fontSize: 16, color: Colors.white),
-            ),
-            backgroundColor: AppColors.accent,
-            behavior: SnackBarBehavior.floating,
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            margin: const EdgeInsets.all(12),
-            elevation: 8,
-            duration: const Duration(seconds: 3),
-          ),
-        );
-        await _fetchUsers();
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'خطا در به‌روزرسانی کاربر: ${_formatErrorMessage(e.toString())}',
-              textDirection: TextDirection.rtl,
-              style: const TextStyle(
-                  fontFamily: 'Vazir', fontSize: 16, color: Colors.white),
-            ),
-            backgroundColor: Colors.red.shade700,
-            behavior: SnackBarBehavior.floating,
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            margin: const EdgeInsets.all(12),
-            elevation: 8,
-            duration: const Duration(seconds: 4),
-          ),
-        );
-      }
-      debugPrint('Error updating user: $e');
-    }
-  }
-
-  Future<void> _deleteUser(String userId) async {
-    final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    try {
-      debugPrint('Deleting user: $userId');
-      await ApiService.deleteUser(userId, authProvider.token!);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text(
-              'کاربر با موفقیت حذف شد',
-              textDirection: TextDirection.rtl,
-              style: TextStyle(
-                  fontFamily: 'Vazir', fontSize: 16, color: Colors.white),
-            ),
-            backgroundColor: AppColors.accent,
-            behavior: SnackBarBehavior.floating,
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            margin: const EdgeInsets.all(12),
-            elevation: 8,
-            duration: const Duration(seconds: 3),
-          ),
-        );
-        await _fetchUsers();
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'خطا در حذف کاربر: ${_formatErrorMessage(e.toString())}',
-              textDirection: TextDirection.rtl,
-              style: const TextStyle(
-                  fontFamily: 'Vazir', fontSize: 16, color: Colors.white),
-            ),
-            backgroundColor: Colors.red.shade700,
-            behavior: SnackBarBehavior.floating,
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            margin: const EdgeInsets.all(12),
-            elevation: 8,
-            duration: const Duration(seconds: 4),
-          ),
-        );
-      }
-      debugPrint('Error deleting user: $e');
     }
   }
 
@@ -218,6 +108,55 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
         );
       }
       debugPrint('Error changing user role: $e');
+    }
+  }
+
+  Future<void> _deleteUser(String userId) async {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    try {
+      debugPrint('Deleting user: $userId');
+      await ApiService.deleteUser(userId, authProvider.token!);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text(
+              'کاربر با موفقیت حذف شد',
+              textDirection: TextDirection.rtl,
+              style: TextStyle(
+                  fontFamily: 'Vazir', fontSize: 16, color: Colors.white),
+            ),
+            backgroundColor: AppColors.accent,
+            behavior: SnackBarBehavior.floating,
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            margin: const EdgeInsets.all(12),
+            elevation: 8,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+        await _fetchUsers();
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'خطا در حذف کاربر: ${_formatErrorMessage(e.toString())}',
+              textDirection: TextDirection.rtl,
+              style: const TextStyle(
+                  fontFamily: 'Vazir', fontSize: 16, color: Colors.white),
+            ),
+            backgroundColor: Colors.red.shade700,
+            behavior: SnackBarBehavior.floating,
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            margin: const EdgeInsets.all(12),
+            elevation: 8,
+            duration: const Duration(seconds: 4),
+          ),
+        );
+      }
+      debugPrint('Error deleting user: $e');
     }
   }
 
@@ -284,10 +223,6 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
   }
 
   Widget _buildUserCard(BuildContext context, User user) {
-    final usernameController = TextEditingController(text: user.username);
-    final emailController = TextEditingController(text: user.email);
-    final passwordController = TextEditingController();
-    final formKey = GlobalKey<FormState>();
     String selectedRole = user.role;
 
     return Card(
@@ -303,7 +238,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  'کاربر: ${user.username}',
+                  'کاربر: ${user.username} (${user.email})',
                   style: const TextStyle(
                     fontFamily: 'Vazir',
                     fontSize: 18,
@@ -320,130 +255,42 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                 ),
               ],
             ),
-            const SizedBox(height: 8),
-            Form(
-              key: formKey,
-              child: Column(
-                children: [
-                  TextFormField(
-                    controller: usernameController,
-                    enabled: false, // غیرفعال کردن فیلد نام کاربری
-                    decoration: const InputDecoration(
-                      labelText: 'نام کاربری',
-                      labelStyle: TextStyle(fontFamily: 'Vazir'),
-                      border: OutlineInputBorder(),
-                      contentPadding:
-                          EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    ),
-                    textDirection: TextDirection.rtl,
-                  ),
-                  const SizedBox(height: 12),
-                  TextFormField(
-                    controller: emailController,
-                    decoration: const InputDecoration(
-                      labelText: 'ایمیل',
-                      labelStyle: TextStyle(fontFamily: 'Vazir'),
-                      border: OutlineInputBorder(),
-                      contentPadding:
-                          EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    ),
-                    textDirection: TextDirection.ltr,
-                    keyboardType: TextInputType.emailAddress,
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'لطفاً ایمیل را وارد کنید';
-                      }
-                      if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$')
-                          .hasMatch(value)) {
-                        return 'لطفاً ایمیل معتبر وارد کنید';
-                      }
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: 12),
-                  TextFormField(
-                    controller: passwordController,
-                    decoration: const InputDecoration(
-                      labelText: 'رمز عبور جدید (اختیاری)',
-                      labelStyle: TextStyle(fontFamily: 'Vazir'),
-                      border: OutlineInputBorder(),
-                      contentPadding:
-                          EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    ),
-                    textDirection: TextDirection.ltr,
-                    obscureText: true,
-                    validator: (value) {
-                      if (value != null &&
-                          value.isNotEmpty &&
-                          value.length < 6) {
-                        return 'رمز عبور باید حداقل ۶ کاراکتر باشد';
-                      }
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: 12),
-                  DropdownButtonFormField<String>(
-                    value: selectedRole,
-                    decoration: const InputDecoration(
-                      labelText: 'نقش کاربر',
-                      labelStyle: TextStyle(fontFamily: 'Vazir'),
-                      border: OutlineInputBorder(),
-                      contentPadding:
-                          EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    ),
-                    items: const [
-                      DropdownMenuItem(
-                        value: 'admin',
-                        child:
-                            Text('مدیر', style: TextStyle(fontFamily: 'Vazir')),
-                      ),
-                      DropdownMenuItem(
-                        value: 'warehouse_manager',
-                        child: Text('مدیر انبار',
-                            style: TextStyle(fontFamily: 'Vazir')),
-                      ),
-                      DropdownMenuItem(
-                        value: 'delivery_agent',
-                        child: Text('مامور تحویل',
-                            style: TextStyle(fontFamily: 'Vazir')),
-                      ),
-                      DropdownMenuItem(
-                        value: 'user',
-                        child: Text('کاربر عادی',
-                            style: TextStyle(fontFamily: 'Vazir')),
-                      ),
-                    ],
-                    onChanged: (value) {
-                      if (value != null && value != selectedRole) {
-                        _showChangeRoleConfirmationDialog(context, user, value);
-                      }
-                    },
-                  ),
-                  const SizedBox(height: 12),
-                  ElevatedButton(
-                    onPressed: () {
-                      if (formKey.currentState!.validate()) {
-                        _updateUser(
-                          user,
-                          emailController.text,
-                          newPassword: passwordController.text.isNotEmpty
-                              ? passwordController.text
-                              : null,
-                        );
-                      }
-                    },
-                    child: const Text('به‌روزرسانی',
-                        style: TextStyle(fontFamily: 'Vazir')),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.accent,
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12)),
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 20, vertical: 12),
-                    ),
-                  ),
-                ],
+            const SizedBox(height: 12),
+            DropdownButtonFormField<String>(
+              value: selectedRole,
+              decoration: const InputDecoration(
+                labelText: 'نقش کاربر',
+                labelStyle: TextStyle(fontFamily: 'Vazir'),
+                border: OutlineInputBorder(),
+                contentPadding:
+                    EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               ),
+              items: const [
+                DropdownMenuItem(
+                  value: 'admin',
+                  child: Text('مدیر', style: TextStyle(fontFamily: 'Vazir')),
+                ),
+                DropdownMenuItem(
+                  value: 'warehouse_manager',
+                  child:
+                      Text('مدیر انبار', style: TextStyle(fontFamily: 'Vazir')),
+                ),
+                DropdownMenuItem(
+                  value: 'delivery_agent',
+                  child: Text('مامور تحویل',
+                      style: TextStyle(fontFamily: 'Vazir')),
+                ),
+                DropdownMenuItem(
+                  value: 'user',
+                  child:
+                      Text('کاربر عادی', style: TextStyle(fontFamily: 'Vazir')),
+                ),
+              ],
+              onChanged: (value) {
+                if (value != null && value != selectedRole) {
+                  _showChangeRoleConfirmationDialog(context, user, value);
+                }
+              },
             ),
           ],
         ),

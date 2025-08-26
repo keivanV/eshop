@@ -167,7 +167,7 @@ class _CategoryManagementScreenState extends State<CategoryManagementScreen> {
         flexibleSpace: Container(
           decoration: BoxDecoration(
             gradient: LinearGradient(
-              colors: [AppColors.primary, AppColors.accent.withOpacity(0.8)],
+              colors: [AppColors.primary, AppColors.primary],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),

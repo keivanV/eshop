@@ -21,7 +21,6 @@ class ProductCard extends StatefulWidget {
 class _ProductCardState extends State<ProductCard> {
   bool _isHovered = false;
   int _currentImageIndex = 0;
-  int _quantity = 1;
 
   @override
   Widget build(BuildContext context) {
@@ -38,17 +37,11 @@ class _ProductCardState extends State<ProductCard> {
             : ['https://placehold.co/200x120'];
 
     return GestureDetector(
-      onTap: () {
-        debugPrint('Navigating to product details: ${widget.product.id}');
-        Navigator.pushNamed(context, AppRoutes.productDetail,
-            arguments: widget.product.id);
-      },
       onTapDown: (_) => setState(() => _isHovered = true),
       onTapUp: (_) => setState(() => _isHovered = false),
       onTapCancel: () => setState(() => _isHovered = false),
       child: ConstrainedBox(
-        constraints:
-            const BoxConstraints(maxWidth: 140, maxHeight: 240), // کاهش ارتفاع
+        constraints: const BoxConstraints(maxWidth: 140, maxHeight: 240),
         child: FadeIn(
           duration: const Duration(milliseconds: 400),
           child: AnimatedContainer(
@@ -102,7 +95,7 @@ class _ProductCardState extends State<ProductCard> {
                                 ),
                                 child: CarouselSlider(
                                   options: CarouselOptions(
-                                    height: 80, // کاهش ارتفاع تصویر
+                                    height: 80,
                                     autoPlay: imageUrls.length > 1,
                                     autoPlayInterval:
                                         const Duration(seconds: 3),
@@ -192,7 +185,7 @@ class _ProductCardState extends State<ProductCard> {
                         ),
                       ),
                       Padding(
-                        padding: const EdgeInsets.all(8.0), // کاهش padding
+                        padding: const EdgeInsets.all(8.0),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
@@ -200,7 +193,7 @@ class _ProductCardState extends State<ProductCard> {
                               widget.product.name,
                               style: const TextStyle(
                                 fontWeight: FontWeight.bold,
-                                fontSize: 14, // کاهش اندازه فونت
+                                fontSize: 18,
                                 fontFamily: 'Vazir',
                                 color: AppColors.primary,
                               ),
@@ -216,7 +209,7 @@ class _ProductCardState extends State<ProductCard> {
                                     ? '${widget.product.description!.substring(0, 50)}...'
                                     : widget.product.description!,
                                 style: TextStyle(
-                                  fontSize: 10,
+                                  fontSize: 15,
                                   color: widget.product.stock > 0
                                       ? Colors.grey.shade600
                                       : Colors.grey.shade400,
@@ -231,7 +224,7 @@ class _ProductCardState extends State<ProductCard> {
                               children: [
                                 FaIcon(
                                   FontAwesomeIcons.box,
-                                  size: 12,
+                                  size: 15,
                                   color: widget.product.stock > 0
                                       ? Colors.green.shade600
                                       : Colors.red.shade600,
@@ -242,7 +235,7 @@ class _ProductCardState extends State<ProductCard> {
                                       ? 'موجودی: ${widget.product.stock}'
                                       : 'ناموجود',
                                   style: TextStyle(
-                                    fontSize: 10,
+                                    fontSize: 15,
                                     color: widget.product.stock > 0
                                         ? Colors.green.shade600
                                         : Colors.red.shade600,
@@ -258,7 +251,7 @@ class _ProductCardState extends State<ProductCard> {
                               children: [
                                 FaIcon(
                                   FontAwesomeIcons.tag,
-                                  size: 12,
+                                  size: 15,
                                   color: widget.product.stock > 0
                                       ? AppColors.accent
                                       : Colors.grey.shade400,
@@ -267,7 +260,7 @@ class _ProductCardState extends State<ProductCard> {
                                 Text(
                                   'قیمت: ${widget.product.price.toStringAsFixed(0)} تومان',
                                   style: TextStyle(
-                                    fontSize: 10,
+                                    fontSize: 15,
                                     color: widget.product.stock > 0
                                         ? AppColors.accent
                                         : Colors.grey.shade400,
@@ -280,157 +273,9 @@ class _ProductCardState extends State<ProductCard> {
                             ),
                             const SizedBox(height: 8),
                             if (widget.product.stock > 0)
-                              Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Row(
-                                    children: [
-                                      IconButton(
-                                        icon: FaIcon(
-                                          FontAwesomeIcons.minus,
-                                          size: 14,
-                                          color: AppColors.accent,
-                                        ),
-                                        onPressed: () {
-                                          if (_quantity > 1) {
-                                            setState(() {
-                                              _quantity--;
-                                            });
-                                          }
-                                        },
-                                        padding: EdgeInsets.zero,
-                                        constraints: const BoxConstraints(),
-                                      ),
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(
-                                            horizontal: 8, vertical: 2),
-                                        decoration: BoxDecoration(
-                                          border: Border.all(
-                                              color: Colors.grey.shade400,
-                                              width: 1),
-                                          borderRadius:
-                                              BorderRadius.circular(6),
-                                          color: Colors.white,
-                                        ),
-                                        child: Text(
-                                          '$_quantity',
-                                          style: const TextStyle(
-                                            fontFamily: 'Vazir',
-                                            fontSize: 12,
-                                            fontWeight: FontWeight.bold,
-                                            color: AppColors.primary,
-                                          ),
-                                        ),
-                                      ),
-                                      IconButton(
-                                        icon: FaIcon(
-                                          FontAwesomeIcons.plus,
-                                          size: 14,
-                                          color: AppColors.accent,
-                                        ),
-                                        onPressed: () {
-                                          if (_quantity <
-                                              widget.product.stock) {
-                                            setState(() {
-                                              _quantity++;
-                                            });
-                                          }
-                                        },
-                                        padding: EdgeInsets.zero,
-                                        constraints: const BoxConstraints(),
-                                      ),
-                                    ],
-                                  ),
-                                  ZoomIn(
-                                    duration: const Duration(milliseconds: 400),
-                                    child: Container(
-                                      decoration: BoxDecoration(
-                                        gradient: LinearGradient(
-                                          colors: [
-                                            AppColors.accent,
-                                            AppColors.primary.withOpacity(0.8),
-                                          ],
-                                          begin: Alignment.topLeft,
-                                          end: Alignment.bottomRight,
-                                        ),
-                                        borderRadius: BorderRadius.circular(8),
-                                        boxShadow: [
-                                          BoxShadow(
-                                            color: AppColors.accent.withOpacity(
-                                                _isHovered ? 0.4 : 0.2),
-                                            blurRadius: 6,
-                                            offset: const Offset(0, 2),
-                                          ),
-                                        ],
-                                      ),
-                                      child: ElevatedButton(
-                                        onPressed: () {
-                                          cartProvider.addItem(
-                                              widget.product, _quantity);
-                                          ScaffoldMessenger.of(context)
-                                              .hideCurrentSnackBar();
-                                          ScaffoldMessenger.of(context)
-                                              .showSnackBar(
-                                            SnackBar(
-                                              content: Text(
-                                                'محصول ${widget.product.name} به سبد خرید اضافه شد',
-                                                textDirection:
-                                                    TextDirection.rtl,
-                                                style: const TextStyle(
-                                                  fontFamily: 'Vazir',
-                                                  fontSize: 10,
-                                                  color: Colors.white,
-                                                ),
-                                              ),
-                                              backgroundColor: AppColors.accent,
-                                              duration:
-                                                  const Duration(seconds: 2),
-                                              behavior:
-                                                  SnackBarBehavior.floating,
-                                              shape: RoundedRectangleBorder(
-                                                borderRadius:
-                                                    BorderRadius.circular(8),
-                                              ),
-                                            ),
-                                          );
-                                        },
-                                        style: ElevatedButton.styleFrom(
-                                          backgroundColor: Colors.transparent,
-                                          foregroundColor: Colors.white,
-                                          shape: RoundedRectangleBorder(
-                                            borderRadius:
-                                                BorderRadius.circular(8),
-                                          ),
-                                          padding: const EdgeInsets.symmetric(
-                                              horizontal: 8, vertical: 6),
-                                          elevation: 0,
-                                          shadowColor: Colors.transparent,
-                                        ),
-                                        child: Row(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: [
-                                            FaIcon(
-                                              FontAwesomeIcons.cartPlus,
-                                              size: 14,
-                                              color: Colors.white,
-                                            ),
-                                            const SizedBox(width: 4),
-                                            const Text(
-                                              'ثبت',
-                                              style: TextStyle(
-                                                fontFamily: 'Vazir',
-                                                fontSize: 10,
-                                                fontWeight: FontWeight.bold,
-                                                color: Colors.white,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ],
+                              QuantitySelector(
+                                product: widget.product,
+                                cartProvider: cartProvider,
                               ),
                           ],
                         ),
@@ -461,7 +306,7 @@ class _ProductCardState extends State<ProductCard> {
                             'ناموجود',
                             style: TextStyle(
                               fontFamily: 'Vazir',
-                              fontSize: 9,
+                              fontSize: 12,
                               color: Colors.white,
                               fontWeight: FontWeight.bold,
                             ),
@@ -476,6 +321,218 @@ class _ProductCardState extends State<ProductCard> {
           ),
         ),
       ),
+    );
+  }
+}
+
+class QuantitySelector extends StatefulWidget {
+  final Product product;
+  final CartProvider cartProvider;
+
+  const QuantitySelector({
+    super.key,
+    required this.product,
+    required this.cartProvider,
+  });
+
+  @override
+  _QuantitySelectorState createState() => _QuantitySelectorState();
+}
+
+class _QuantitySelectorState extends State<QuantitySelector> {
+  int _quantity = 1;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Row(
+          children: [
+            // دکمه کاهش تعداد
+            GestureDetector(
+              onTap: () {
+                if (_quantity > 1) {
+                  setState(() {
+                    _quantity--;
+                  });
+                }
+              },
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                width: 28,
+                height: 28,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: LinearGradient(
+                    colors: [
+                      AppColors.accent,
+                      AppColors.primary.withOpacity(0.8),
+                    ],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppColors.accent.withOpacity(0.3),
+                      blurRadius: 4,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: const Center(
+                  child: FaIcon(
+                    FontAwesomeIcons.minus,
+                    size: 14,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                border: Border.all(color: AppColors.accent, width: 1),
+                borderRadius: BorderRadius.circular(12),
+                color: Colors.white,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.05),
+                    blurRadius: 2,
+                    spreadRadius: 1,
+                  ),
+                ],
+              ),
+              child: Text(
+                '$_quantity',
+                style: const TextStyle(
+                  fontFamily: 'Vazir',
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.primary,
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            // دکمه افزایش تعداد
+            GestureDetector(
+              onTap: () {
+                if (_quantity < widget.product.stock) {
+                  setState(() {
+                    _quantity++;
+                  });
+                }
+              },
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                width: 28,
+                height: 28,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: LinearGradient(
+                    colors: [
+                      AppColors.accent,
+                      AppColors.primary.withOpacity(0.8),
+                    ],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppColors.accent.withOpacity(0.3),
+                      blurRadius: 4,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: const Center(
+                  child: FaIcon(
+                    FontAwesomeIcons.plus,
+                    size: 14,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+        // دکمه ثبت
+        ZoomIn(
+          duration: const Duration(milliseconds: 400),
+          child: GestureDetector(
+            onTap: () {
+              widget.cartProvider.addItem(widget.product, _quantity);
+              ScaffoldMessenger.of(context).hideCurrentSnackBar();
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(
+                    'محصول ${widget.product.name} به سبد خرید اضافه شد',
+                    textDirection: TextDirection.rtl,
+                    style: const TextStyle(
+                      fontFamily: 'Vazir',
+                      fontSize: 12,
+                      color: Colors.white,
+                    ),
+                  ),
+                  backgroundColor: AppColors.accent,
+                  duration: const Duration(seconds: 2),
+                  behavior: SnackBarBehavior.floating,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+              );
+            },
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              transform: Matrix4.identity()..scale(1.0),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    AppColors.accent,
+                    AppColors.primary,
+                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.accent.withOpacity(0.3),
+                    blurRadius: 6,
+                    offset: const Offset(0, 3),
+                  ),
+                ],
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Pulse(
+                    duration: const Duration(seconds: 2),
+                    child: FaIcon(
+                      FontAwesomeIcons.cartPlus,
+                      size: 16,
+                      color: Colors.white,
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  const Text(
+                    'افزودن به سبد',
+                    style: TextStyle(
+                      fontFamily: 'Vazir',
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

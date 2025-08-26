@@ -49,12 +49,10 @@ class _ProductsTabState extends State<ProductsTab>
   @override
   Widget build(BuildContext context) {
     final productProvider = Provider.of<ProductProvider>(context);
-    final authProvider = Provider.of<AuthProvider>(context,
-        listen: false); // فرض بر وجود AuthProvider
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
     final screenWidth = MediaQuery.of(context).size.width;
-    // Calculate maxCrossAxisExtent dynamically (140 card width + 20 spacing)
-    const cardWidth = 140.0;
-    const spacing = 20.0;
+    const cardWidth = 100.0;
+    const spacing = 8.0;
     final crossAxisCount =
         (screenWidth / (cardWidth + spacing)).floor().clamp(2, 4);
     final maxCrossAxisExtent = screenWidth / crossAxisCount;
@@ -134,10 +132,10 @@ class _ProductsTabState extends State<ProductsTab>
                       return Center(child: _buildNoProductsCard());
                     }
                     return GridView.builder(
-                      padding: const EdgeInsets.all(20),
+                      padding: const EdgeInsets.all(8),
                       gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
                         maxCrossAxisExtent: maxCrossAxisExtent,
-                        childAspectRatio: 2 / 3,
+                        childAspectRatio: 3 / 2.5,
                         crossAxisSpacing: spacing,
                         mainAxisSpacing: spacing,
                       ),
@@ -194,7 +192,7 @@ class _ProductsTabState extends State<ProductsTab>
             'در حال بارگذاری محصولات...',
             style: TextStyle(
               fontFamily: 'Vazir',
-              fontSize: 20,
+              fontSize: 24, // فونت بزرگ‌تر
               fontWeight: FontWeight.w600,
               color: AppColors.primary,
             ),
@@ -207,21 +205,31 @@ class _ProductsTabState extends State<ProductsTab>
 
   Widget _buildErrorCard(String errorMessage) {
     return FadeInUp(
-      duration: const Duration(milliseconds: 800),
+      duration: const Duration(milliseconds: 1000), // انیمیشن روان‌تر
       child: Container(
         margin: const EdgeInsets.symmetric(horizontal: 24),
         padding: const EdgeInsets.all(28),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(24),
+          borderRadius: BorderRadius.circular(28), // گوشه‌های گردتر
+          gradient: LinearGradient(
+            colors: [
+              Colors.white,
+              AppColors.accent.withOpacity(0.1),
+              AppColors.primary.withOpacity(0.1),
+            ],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withOpacity(0.2),
-              blurRadius: 14,
-              spreadRadius: 4,
+              blurRadius: 16, // سایه نرم‌تر
+              spreadRadius: 6, // سایه گسترده‌تر
             ),
           ],
-          border: Border.all(color: Colors.black87, width: 1.5),
+          border:
+              Border.all(color: Colors.black87, width: 1.0), // حاشیه ظریف‌تر
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -231,7 +239,7 @@ class _ProductsTabState extends State<ProductsTab>
               child: const FaIcon(
                 FontAwesomeIcons.exclamationTriangle,
                 color: Colors.redAccent,
-                size: 56,
+                size: 64, // آیکون بزرگ‌تر
               ),
             ),
             const SizedBox(height: 24),
@@ -239,7 +247,7 @@ class _ProductsTabState extends State<ProductsTab>
               'خطا در بارگذاری محصولات: $errorMessage',
               textDirection: TextDirection.rtl,
               style: const TextStyle(
-                fontSize: 20,
+                fontSize: 24, // فونت بزرگ‌تر
                 fontFamily: 'Vazir',
                 fontWeight: FontWeight.w600,
                 color: Colors.redAccent,
@@ -284,7 +292,7 @@ class _ProductsTabState extends State<ProductsTab>
                     'تلاش مجدد',
                     style: TextStyle(
                       fontFamily: 'Vazir',
-                      fontSize: 18,
+                      fontSize: 22, // فونت بزرگ‌تر
                       fontWeight: FontWeight.bold,
                     ),
                   ),
@@ -299,21 +307,31 @@ class _ProductsTabState extends State<ProductsTab>
 
   Widget _buildNoProductsCard() {
     return FadeInUp(
-      duration: const Duration(milliseconds: 800),
+      duration: const Duration(milliseconds: 1000), // انیمیشن روان‌تر
       child: Container(
         margin: const EdgeInsets.symmetric(horizontal: 24),
         padding: const EdgeInsets.all(28),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(24),
+          borderRadius: BorderRadius.circular(28), // گوشه‌های گردتر
+          gradient: LinearGradient(
+            colors: [
+              Colors.white,
+              AppColors.accent.withOpacity(0.1),
+              AppColors.primary.withOpacity(0.1),
+            ],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withOpacity(0.2),
-              blurRadius: 14,
-              spreadRadius: 4,
+              blurRadius: 16, // سایه نرم‌تر
+              spreadRadius: 6, // سایه گسترده‌تر
             ),
           ],
-          border: Border.all(color: Colors.black87, width: 1.5),
+          border:
+              Border.all(color: Colors.black87, width: 1.0), // حاشیه ظریف‌تر
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -323,7 +341,7 @@ class _ProductsTabState extends State<ProductsTab>
               child: const FaIcon(
                 FontAwesomeIcons.boxOpen,
                 color: AppColors.primary,
-                size: 56,
+                size: 64, // آیکون بزرگ‌تر
               ),
             ),
             const SizedBox(height: 24),
@@ -331,7 +349,7 @@ class _ProductsTabState extends State<ProductsTab>
               'هیچ محصولی یافت نشد',
               textDirection: TextDirection.rtl,
               style: TextStyle(
-                fontSize: 20,
+                fontSize: 24, // فونت بزرگ‌تر
                 fontFamily: 'Vazir',
                 fontWeight: FontWeight.w600,
                 color: AppColors.primary,
@@ -343,7 +361,7 @@ class _ProductsTabState extends State<ProductsTab>
               duration: const Duration(milliseconds: 800),
               child: Container(
                 decoration: BoxDecoration(
-                  gradient: LinearGradient(
+                  gradient: const LinearGradient(
                     colors: [AppColors.accent, AppColors.primary],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
@@ -376,7 +394,7 @@ class _ProductsTabState extends State<ProductsTab>
                     'تلاش مجدد',
                     style: TextStyle(
                       fontFamily: 'Vazir',
-                      fontSize: 18,
+                      fontSize: 22, // فونت بزرگ‌تر
                       fontWeight: FontWeight.bold,
                     ),
                   ),

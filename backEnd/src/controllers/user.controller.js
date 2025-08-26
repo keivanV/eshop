@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
 const User = require('../models/user.model');
+const Role = require('../models/role.model');
 const bcrypt = require('bcryptjs');
 
 exports.getUsers = async (req, res) => {
@@ -49,9 +50,15 @@ exports.updateUser = async (req, res) => {
     const { id } = req.params;
     const { email, password } = req.body;
 
-    console.log(`Updating user with ID: ${id}`); // لاگ برای دیباگ
+    // Check if the user is updating their own account
+    if (req.user.id !== id) {
+      console.log(`Unauthorized attempt to update user ${id} by user ${req.user.id}`);
+      return res.status(403).json({ msg: 'You can only update your own account' });
+    }
 
-    // اعتبارسنجی فرمت ID
+    console.log(`Updating user with ID: ${id}`); // Debug log
+
+    // Validate ID format
     if (!mongoose.Types.ObjectId.isValid(id)) {
       console.log(`Invalid user ID format: ${id}`);
       return res.status(400).json({ msg: 'Invalid user ID format' });
@@ -75,7 +82,7 @@ exports.updateUser = async (req, res) => {
         return res.status(400).json({ msg: 'Password must be a string and at least 6 characters long' });
       }
       updateData.password = await bcrypt.hash(trimmedPassword, 10);
-      console.log(`Hashed password: ${updateData.password}`);
+      console.log(`Hashed password for user ${id}`);
     }
 
     if (Object.keys(updateData).length === 0) {
@@ -83,7 +90,7 @@ exports.updateUser = async (req, res) => {
       return res.status(400).json({ msg: 'No changes provided' });
     }
 
-    // به‌روزرسانی کاربر
+    // Update user
     const updatedUser = await User.findByIdAndUpdate(
       id,
       { $set: updateData },
@@ -126,10 +133,24 @@ exports.deleteUser = async (req, res) => {
 exports.changeRole = async (req, res) => {
   try {
     const { roleName } = req.body;
+    if (!roleName) {
+      return res.status(400).json({ msg: 'Role name is required' });
+    }
     const role = await Role.findOne({ name: roleName });
-    if (!role) return res.status(400).json({ msg: 'Invalid role' });
-    const user = await User.findByIdAndUpdate(req.params.id, { role: role._id }, { new: true }).populate('role');
-    if (!user) return res.status(404).json({ msg: 'User not found' });
+    if (!role) {
+      console.log(`Role not found: ${roleName}`);
+      return res.status(400).json({ msg: 'Invalid role' });
+    }
+    const user = await User.findByIdAndUpdate(
+      req.params.id,
+      { role: role._id },
+      { new: true }
+    ).populate('role');
+    if (!user) {
+      console.log(`User not found for ID: ${req.params.id}`);
+      return res.status(404).json({ msg: 'User not found' });
+    }
+    console.log(`User role updated successfully: ${user._id} to ${roleName}`);
     res.json({
       _id: user._id.toString(),
       username: user.username,
