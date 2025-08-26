@@ -58,8 +58,6 @@ Note : Default user / pass For adminPannel : admin / admin
     <tr>
       <td><img src="project_images/screen5.png" alt="Bookmarks" width="300"/></td>
       <td><img src="project_images/screen6.png" alt="Bookmarks" width="300"/></td>
-
-      <td></td>
     </tr>
   </table>
 
